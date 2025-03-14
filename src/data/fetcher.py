@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union, Any
 
 import pandas as pd
 import requests
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # For loading environment variables from .env file
 
 # Configure logging
 logging.basicConfig(
@@ -35,7 +35,7 @@ class MarketDataFetcher:
         Args:
             api_key: API key for authentication (optional if provided via env vars)
         """
-        self.api_key = api_key or os.getenv("MARKET_DATA_API_KEY")
+        self.api_key = api_key or os.getenv("ALPHA_VANTAGE_API_KEY")
         if not self.api_key:
             logger.warning("No API key provided. Some functionality may be limited.")
     
@@ -379,6 +379,13 @@ def get_data_api(api_name: str = "alpha_vantage", api_key: Optional[str] = None)
     Returns:
         Instance of a MarketDataFetcher subclass
     """
+    # If no API key is provided, get the appropriate key from environment variables
+    if not api_key:
+        if api_name.lower() == "alpha_vantage":
+            api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+        elif api_name.lower() == "yahoo_finance":
+            api_key = os.getenv("YAHOO_FINANCE_API_KEY")
+    
     api_mapping = {
         "alpha_vantage": AlphaVantageAPI,
         "yahoo_finance": YahooFinanceAPI,

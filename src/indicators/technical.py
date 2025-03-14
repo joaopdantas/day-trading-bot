@@ -316,22 +316,46 @@ class TechnicalIndicators:
         
         result_df = df.copy()
         
-        # Calculate Ichimoku Cloud
-        ichimoku = ta.ichimoku(result_df['high'], result_df['low'], 
-                             conversion=conversion_period,
-                             base=base_period,
-                             lagging=lagging_span_period,
-                             displacement=displacement)
-        
-        # Add columns to DataFrame
-        for column in ichimoku.columns:
-            result_df[column.lower()] = ichimoku[column]
-        
-        # Add signal columns
-        result_df['ichimoku_bullish'] = ((result_df['isa'] > result_df['isb']) & 
-                                        (result_df['close'] > result_df['isa'])).astype(int)
-        result_df['ichimoku_bearish'] = ((result_df['isa'] < result_df['isb']) & 
-                                        (result_df['close'] < result_df['isa'])).astype(int)
+        try:
+            # Calculate Ichimoku Cloud - handle both DataFrame and tuple return types
+            ichimoku = ta.ichimoku(result_df['high'], result_df['low'], result_df['close'],
+                                 conversion=conversion_period,
+                                 base=base_period,
+                                 lagging=lagging_span_period,
+                                 displacement=displacement)
+            
+            # Check if ichimoku is a tuple (older versions of pandas-ta) or DataFrame (newer versions)
+            if isinstance(ichimoku, tuple):
+                # Unpack the tuple (assuming standard order of components)
+                if len(ichimoku) >= 5:
+                    result_df['tenkan_sen'] = ichimoku[0]  # Conversion line
+                    result_df['kijun_sen'] = ichimoku[1]   # Base line
+                    result_df['senkou_span_a'] = ichimoku[2]  # Leading span A
+                    result_df['senkou_span_b'] = ichimoku[3]  # Leading span B
+                    result_df['chikou_span'] = ichimoku[4]   # Lagging span
+                else:
+                    logger.warning("Ichimoku Cloud tuple has unexpected length")
+            else:
+                # It's a DataFrame, so add columns to the result DataFrame
+                for column in ichimoku.columns:
+                    result_df[column.lower()] = ichimoku[column]
+            
+            # Add signal columns - adjust column names based on how they were added
+            if 'senkou_span_a' in result_df.columns and 'senkou_span_b' in result_df.columns:
+                # Use these column names if they exist
+                result_df['ichimoku_bullish'] = ((result_df['senkou_span_a'] > result_df['senkou_span_b']) & 
+                                             (result_df['close'] > result_df['senkou_span_a'])).astype(int)
+                result_df['ichimoku_bearish'] = ((result_df['senkou_span_a'] < result_df['senkou_span_b']) & 
+                                             (result_df['close'] < result_df['senkou_span_a'])).astype(int)
+            elif 'isa' in result_df.columns and 'isb' in result_df.columns:
+                # Use these column names as a fallback
+                result_df['ichimoku_bullish'] = ((result_df['isa'] > result_df['isb']) & 
+                                             (result_df['close'] > result_df['isa'])).astype(int)
+                result_df['ichimoku_bearish'] = ((result_df['isa'] < result_df['isb']) & 
+                                             (result_df['close'] < result_df['isa'])).astype(int)
+            
+        except Exception as e:
+            logger.error(f"Error calculating Ichimoku Cloud: {e}")
         
         return result_df
     
