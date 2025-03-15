@@ -30,6 +30,12 @@ day-trading-bot/
 ├── notebooks/              # Jupyter notebooks for exploration and prototyping
 ├── config/                 # Configuration files
 └── chrome-extension/       # Frontend Chrome extension code (to be added in Phase 3)
+└── testing/                # Main source code directory
+│   ├── control_point_1/                         # Cointains tests for CP1
+│   │   ├── enhanced_test_implementation.py      
+│   │   └── test_implementation.py.py 
+│   └── control_point_2/                         # Cointains tests for CP2
+│       └── test_data_pipeline.py               
 ```
 
 ## Development Timeline
