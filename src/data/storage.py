@@ -58,7 +58,7 @@ class MarketDataStorage:
     
     def _create_indexes(self):
         """Create indexes for efficient queries."""
-        if self.db:
+        if self.db is not None:
             try:
                 # Index for historical data
                 self.db.historical_data.create_index([

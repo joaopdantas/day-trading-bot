@@ -1,219 +1,325 @@
 """
-Data Pipeline Visualization for Control Point 2.
+Final Data Pipeline Visualization for Control Point 2.
 
-This script creates a visual representation of the entire data pipeline.
+This script creates a professional visual representation of the MakesALot
+data pipeline with proper text spacing and no overlaps.
 """
 
 import os
-import sys
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle, FancyArrowPatch
-import matplotlib.gridspec as gridspec
-
-# Add parent directory to path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
+from matplotlib.patches import Rectangle, FancyArrowPatch, Patch
+from matplotlib.lines import Line2D
 
 def create_pipeline_visualization():
-    """Create a visual representation of the MakesALot data pipeline."""
+    """Create a clean, professional visualization of the data pipeline."""
     # Create figure
-    fig = plt.figure(figsize=(14, 8))
+    plt.figure(figsize=(14, 8))
     
-    # Title
-    fig.suptitle('MakesALot Trading Bot - Data Pipeline (Control Point 2)', fontsize=16, fontweight='bold')
-    
-    # Create grid for components
-    gs = gridspec.GridSpec(3, 3, width_ratios=[1, 1, 1], height_ratios=[1, 1.5, 1])
+    # Set up the plot
+    ax = plt.subplot(1, 1, 1)
+    ax.set_xlim(0, 1000)
+    ax.set_ylim(0, 600)
+    ax.axis('off')
     
     # Define colors
     colors = {
-        'data': '#4285F4',      # Google Blue
-        'process': '#34A853',   # Google Green
-        'analysis': '#FBBC05',  # Google Yellow
-        'storage': '#EA4335',   # Google Red
-        'arrow': '#777777',     # Arrow gray
-        'background': '#F6F6F6' # Light gray background
+        'data': '#A8D5FF',      # Light blue
+        'process': '#A8E6B8',   # Light green
+        'analysis': '#FFE699',  # Light gold
+        'storage': '#FFBF86',   # Light orange
+        'main_flow': '#333333', # Dark gray for main flow
+        'storage_flow': '#777777', # Medium gray for storage
+        'shadow': '#00000022'   # Shadow color
     }
     
-    # Set background color
-    fig.patch.set_facecolor('white')
+    # Define component positions and sizes
+    components = [
+        # Row 1 - Data acquisition and preprocessing
+        {'name': 'Data Sources', 'x': 100, 'y': 450, 'width': 250, 'height': 120, 'color': colors['data'],
+         'features': [
+             '• Alpha Vantage API',
+             '• Yahoo Finance API',
+             '• Future: Direct Exchange APIs'
+         ]},
+        
+        {'name': 'Data Fetcher', 'x': 450, 'y': 450, 'width': 250, 'height': 120, 'color': colors['data'],
+         'features': [
+             '• Historical Data Retrieval',
+             '• Interval Selection',
+             '• Date Range Filtering',
+             '• Error Handling'
+         ]},
+        
+        {'name': 'Data Preprocessor', 'x': 800, 'y': 450, 'width': 250, 'height': 120, 'color': colors['process'],
+         'features': [
+             '• Cleaning',
+             '• Normalization',
+             '• Feature Engineering',
+             '• Time Features'
+         ]},
+        
+        # Row 2 - Analysis components
+        {'name': 'Technical Indicators', 'x': 100, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+         'features_col1': [
+             '• RSI',
+             '• MACD',
+             '• Bollinger Bands'
+         ],
+         'features_col2': [
+             '• Moving Averages',
+             '• Volume Indicators',
+             '• Volatility Metrics'
+         ]},
+        
+        {'name': 'Pattern Recognition', 'x': 450, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+         'features': [
+             '• Candlestick Patterns',
+             '• Support & Resistance',
+             '• Trend Analysis',
+             '• Chart Patterns'
+         ]},
+        
+        {'name': 'Signal Generation', 'x': 800, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+         'features': [
+             '• Buy/Sell Signals',
+             '• Strategy Combination',
+             '• Risk Analysis',
+             '• Confidence Levels'
+         ]},
+        
+        # Row 3 - Storage component (wider)
+        {'name': 'MongoDB Storage', 'x': 450, 'y': 100, 'width': 250, 'height': 120, 'color': colors['storage'],
+         'features_col1': [
+             '• Historical Data Collection',
+             '• Pattern Storage',
+             '• Signal Archive'
+         ],
+         'features_col2': [
+             '• Performance Metrics',
+             '• Query Optimization',
+             '• Data Versioning'
+         ]}
+    ]
     
-    # Data Sources - First row, first column
-    ax1 = fig.add_subplot(gs[0, 0])
-    draw_component(ax1, 'Data Sources', [
-        'Alpha Vantage API',
-        'Yahoo Finance API',
-        'Future: Direct Exchange APIs'
-    ], colors['data'])
+    # Draw all components
+    for component in components:
+        draw_component(ax, component)
     
-    # Data Fetcher - First row, second column
-    ax2 = fig.add_subplot(gs[0, 1])
-    draw_component(ax2, 'Data Fetcher', [
-        'Historical Data Retrieval',
-        'Interval Selection',
-        'Date Range Filtering',
-        'Error Handling'
-    ], colors['data'])
+    # Define connections between components
+    connections = [
+        # Main flow connections
+        {'start': 'Data Sources', 'end': 'Data Fetcher', 'type': 'main'},
+        {'start': 'Data Fetcher', 'end': 'Data Preprocessor', 'type': 'main'},
+        {'start': 'Data Preprocessor', 'end': 'Technical Indicators', 'type': 'main'},
+        {'start': 'Technical Indicators', 'end': 'Pattern Recognition', 'type': 'main'},
+        {'start': 'Pattern Recognition', 'end': 'Signal Generation', 'type': 'main'},
+        
+        # Storage connections
+        {'start': 'Data Preprocessor', 'end': 'MongoDB Storage', 'type': 'storage'},
+        {'start': 'Technical Indicators', 'end': 'MongoDB Storage', 'type': 'storage'},
+        {'start': 'Pattern Recognition', 'end': 'MongoDB Storage', 'type': 'storage'},
+        {'start': 'Signal Generation', 'end': 'MongoDB Storage', 'type': 'storage'}
+    ]
     
-    # Data Preprocessor - First row, third column
-    ax3 = fig.add_subplot(gs[0, 2])
-    draw_component(ax3, 'Data Preprocessor', [
-        'Cleaning',
-        'Normalization',
-        'Feature Engineering',
-        'Time Features'
-    ], colors['process'])
+    # Draw all connections
+    for connection in connections:
+        draw_connection(ax, connection, components, colors)
     
-    # Technical Indicators - Second row, first column
-    ax4 = fig.add_subplot(gs[1, 0])
-    draw_component(ax4, 'Technical Indicators', [
-        'RSI',
-        'MACD',
-        'Bollinger Bands',
-        'Moving Averages',
-        'Volume Indicators',
-        'Volatility Metrics'
-    ], colors['analysis'])
+    # Add title and description
+    plt.figtext(0.5, 0.95, "MakesALot Trading Bot - Data Pipeline (Control Point 2)", 
+              fontsize=20, fontweight='bold', ha='center')
     
-    # Pattern Recognition - Second row, second column
-    ax5 = fig.add_subplot(gs[1, 1])
-    draw_component(ax5, 'Pattern Recognition', [
-        'Candlestick Patterns',
-        'Support & Resistance',
-        'Trend Analysis',
-        'Chart Patterns'
-    ], colors['analysis'])
+    plt.figtext(0.5, 0.91, "Data Flow: Market data is fetched from APIs, preprocessed, analyzed using technical indicators,\n"
+                "patterns are identified, trading signals are generated, and all information is stored in MongoDB.", 
+                fontsize=12, ha='center')
     
-    # Signal Generation - Second row, third column
-    ax6 = fig.add_subplot(gs[1, 2])
-    draw_component(ax6, 'Signal Generation', [
-        'Buy/Sell Signals',
-        'Strategy Combination',
-        'Risk Analysis',
-        'Confidence Levels'
-    ], colors['analysis'])
-    
-    # Data Storage - Third row, span all columns
-    ax7 = fig.add_subplot(gs[2, :])
-    draw_component(ax7, 'MongoDB Storage', [
-        'Historical Data Collection',
-        'Pattern Storage',
-        'Signal Archive',
-        'Performance Metrics',
-        'Query Optimization',
-        'Data Versioning'
-    ], colors['storage'], wider=True)
-    
-    # Add arrows connecting components
-    add_arrow(fig, ax1, ax2)
-    add_arrow(fig, ax2, ax3)
-    add_arrow(fig, ax3, ax4)
-    add_arrow(fig, ax4, ax5)
-    add_arrow(fig, ax5, ax6)
-    
-    # Add arrows to storage
-    add_arrow(fig, ax3, ax7, vertical=True)
-    add_arrow(fig, ax6, ax7, vertical=True)
-    
-    # Remove axes
-    for ax in [ax1, ax2, ax3, ax4, ax5, ax6, ax7]:
-        ax.axis('off')
-    
-    # Add legend for progress
-    add_legend(fig)
+    # Add legend
+    add_legend(ax, colors)
     
     # Add watermark
-    fig.text(0.5, 0.02, 'MakesALot Trading Bot - Control Point 2 - April 2025', 
-             ha='center', color='gray', fontsize=10)
+    plt.figtext(0.5, 0.03, "MakesALot Trading Bot - Control Point 2 - April 2025", 
+                ha='center', fontsize=9, color='gray')
     
-    # Adjust layout
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    
-    # Create directory if it doesn't exist
+    # Save the visualization
     os.makedirs('testing/control_point_2', exist_ok=True)
-    
-    # Save figure
     plt.savefig('testing/control_point_2/data_pipeline_visualization.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("Pipeline visualization saved to testing/control_point_2/data_pipeline_visualization.png")
+    print("Final pipeline visualization saved to testing/control_point_2/data_pipeline_visualization.png")
 
 
-def draw_component(ax, title, features, color, wider=False):
+def draw_component(ax, component):
     """Draw a component box with title and features."""
-    # Component box
-    width = 0.8 if not wider else 0.9
-    height = 0.8
-    rect = Rectangle((0.1, 0.1), width, height, facecolor=color, alpha=0.3, edgecolor=color, linewidth=2)
+    # Extract component properties
+    name = component['name']
+    x = component['x']
+    y = component['y']
+    width = component['width']
+    height = component['height']
+    color = component['color']
+    
+    # Draw shadow for 3D effect
+    shadow = Rectangle((x+5, y-5), width, height, facecolor=colors['shadow'], zorder=1)
+    ax.add_patch(shadow)
+    
+    # Draw main rectangle
+    rect = Rectangle((x, y), width, height, facecolor=color, edgecolor='#333333', 
+                    linewidth=1.5, alpha=0.7, zorder=2)
     ax.add_patch(rect)
     
-    # Title
-    ax.text(0.5, 0.85, title, horizontalalignment='center', fontsize=12, fontweight='bold')
+    # Add component title
+    plt.text(x + width/2, y + height - 25, name, 
+             fontsize=14, fontweight='bold', ha='center', va='center', zorder=3)
     
-    # Features
-    y_pos = 0.75
-    step = 0.1 if len(features) <= 5 else 0.08
-    
-    for feature in features:
-        ax.text(0.15, y_pos, '• ' + feature, fontsize=9)
-        y_pos -= step
-
-
-def add_arrow(fig, from_ax, to_ax, vertical=False):
-    """Add an arrow connecting two components."""
-    # Get axes positions
-    from_pos = from_ax.get_position()
-    to_pos = to_ax.get_position()
-    
-    if vertical:
-        # Vertical arrow (top to bottom)
-        x_from = from_pos.x0 + from_pos.width / 2
-        y_from = from_pos.y0
-        x_to = to_pos.x0 + to_pos.width / 2
-        y_to = to_pos.y0 + to_pos.height
+    # Add features
+    if 'features' in component:
+        # Single column layout
+        features = component['features']
+        y_start = y + height - 50
+        spacing = 20
+        
+        for i, feature in enumerate(features):
+            plt.text(x + 20, y_start - i * spacing, feature, 
+                     fontsize=11, ha='left', va='center', zorder=3)
     else:
-        # Horizontal arrow (left to right)
-        x_from = from_pos.x0 + from_pos.width
-        y_from = from_pos.y0 + from_pos.height / 2
-        x_to = to_pos.x0
-        y_to = to_pos.y0 + to_pos.height / 2
-    
-    # Create arrow
-    arrow = FancyArrowPatch((x_from, y_from), (x_to, y_to),
-                          arrowstyle='-|>', color='#555555',
-                          linewidth=1.5, mutation_scale=15,
-                          connectionstyle='arc3,rad=0.1')
-    
-    # Add arrow to figure
-    fig.add_artist(arrow)
+        # Two column layout
+        col1 = component.get('features_col1', [])
+        col2 = component.get('features_col2', [])
+        y_start = y + height - 50
+        spacing = 20
+        
+        # Draw first column
+        for i, feature in enumerate(col1):
+            plt.text(x + 20, y_start - i * spacing, feature, 
+                     fontsize=11, ha='left', va='center', zorder=3)
+        
+        # Draw second column
+        for i, feature in enumerate(col2):
+            plt.text(x + width/2 + 10, y_start - i * spacing, feature, 
+                     fontsize=11, ha='left', va='center', zorder=3)
 
 
-def add_legend(fig):
-    """Add a legend showing the different component types."""
-    # Legend items
-    legend_items = [
-        ('Data Acquisition', '#4285F4'),
-        ('Data Processing', '#34A853'),
-        ('Analysis Engine', '#FBBC05'),
-        ('Storage System', '#EA4335')
+def draw_connection(ax, connection, components, colors):
+    """Draw a connection arrow between components."""
+    # Find the source and target components
+    source = next(c for c in components if c['name'] == connection['start'])
+    target = next(c for c in components if c['name'] == connection['end'])
+    
+    # Determine connection type
+    conn_type = connection['type']
+    
+    # Get component center positions
+    source_center_x = source['x'] + source['width'] / 2
+    source_center_y = source['y'] + source['height'] / 2
+    target_center_x = target['x'] + target['width'] / 2
+    target_center_y = target['y'] + target['height'] / 2
+    
+    # Calculate connection points based on relative positions
+    # For horizontal connections on the same row
+    if abs(source_center_y - target_center_y) < 10:
+        start_x = source['x'] + source['width']
+        start_y = source_center_y
+        end_x = target['x']
+        end_y = target_center_y
+        curve = 0  # Straight line
+    
+    # For vertical or diagonal connections
+    else:
+        # For main flow from Data Preprocessor to Technical Indicators
+        if source['name'] == 'Data Preprocessor' and target['name'] == 'Technical Indicators':
+            start_x = source['x'] + source['width']/2 - 40
+            start_y = source['y']
+            end_x = target['x'] + target['width']/2 + 40
+            end_y = target['y'] + target['height']
+            curve = -0.3  # Negative curve
+        
+        # For storage connections
+        elif target['name'] == 'MongoDB Storage':
+            # Different connection points based on source position
+            if source['x'] < target['x']:  # Left side components
+                start_x = source['x'] + 3*source['width']/4
+                start_y = source['y']
+                end_x = target['x'] + target['width']/4
+                end_y = target['y'] + target['height']
+                curve = -0.1
+            elif source['x'] > target['x']:  # Right side components
+                start_x = source['x'] + source['width']/4
+                start_y = source['y']
+                end_x = target['x'] + 3*target['width']/4
+                end_y = target['y'] + target['height']
+                curve = 0.1
+            else:  # Center aligned components
+                start_x = source['x'] + source['width']/2
+                start_y = source['y']
+                end_x = target['x'] + target['width']/2
+                end_y = target['y'] + target['height']
+                curve = 0
+        else:
+            # Default connection points for other diagonal connections
+            start_x = source_center_x
+            start_y = source_center_y
+            end_x = target_center_x
+            end_y = target_center_y
+            curve = 0.2
+    
+    # Set arrow style based on connection type
+    if conn_type == 'main':
+        color = colors['main_flow']
+        width = 2.5
+        arrow_style = '-|>'
+        mutation_scale = 20
+    else:  # storage
+        color = colors['storage_flow']
+        width = 1.5
+        arrow_style = '-|>'
+        mutation_scale = 15
+    
+    # Draw the arrow
+    arrow = FancyArrowPatch((start_x, start_y), (end_x, end_y),
+                           connectionstyle=f'arc3,rad={curve}',
+                           arrowstyle=arrow_style,
+                           mutation_scale=mutation_scale,
+                           linewidth=width,
+                           color=color,
+                           zorder=1)
+    ax.add_patch(arrow)
+
+
+def add_legend(ax, colors):
+    """Add a legend for component types and connections."""
+    legend_elements = [
+        Patch(facecolor=colors['data'], edgecolor='#333333', label='Data Acquisition'),
+        Patch(facecolor=colors['process'], edgecolor='#333333', label='Data Processing'),
+        Patch(facecolor=colors['analysis'], edgecolor='#333333', label='Analysis Engine'),
+        Patch(facecolor=colors['storage'], edgecolor='#333333', label='Storage System'),
+        Line2D([0], [0], color=colors['main_flow'], lw=2.5, label='Main Data Flow'),
+        Line2D([0], [0], color=colors['storage_flow'], lw=1.5, label='Storage Connection')
     ]
     
-    # Position and size of legend
-    x, y = 0.01, 0.01
-    width, height = 0.15, 0.05
+    # Create legend box
+    legend = ax.legend(handles=legend_elements, 
+               loc='upper center',
+               bbox_to_anchor=(0.5, 0),
+               title='Component Types and Connections',
+               ncol=3,
+               frameon=True, 
+               fontsize=11)
     
-    # Add legend items
-    for i, (label, color) in enumerate(legend_items):
-        # Calculate position
-        xi = x + i * width
-        
-        # Draw rectangle
-        rect = Rectangle((xi, y), 0.03, height, facecolor=color, alpha=0.3, edgecolor=color)
-        fig.add_artist(rect)
-        
-        # Add label
-        fig.text(xi + 0.035, y + height/2, label, fontsize=8, va='center')
+    # Make the legend title bold
+    legend.get_title().set_fontweight('bold')
+
+
+# Define colors globally for consistent use
+colors = {
+    'data': '#A8D5FF',      # Light blue
+    'process': '#A8E6B8',   # Light green
+    'analysis': '#FFE699',  # Light gold
+    'storage': '#FFBF86',   # Light orange
+    'main_flow': '#333333', # Dark gray for main flow
+    'storage_flow': '#777777', # Medium gray for storage
+    'shadow': '#00000022'   # Shadow color
+}
 
 
 if __name__ == "__main__":

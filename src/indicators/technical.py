@@ -174,19 +174,63 @@ class TechnicalIndicators:
             logger.warning(f"Cannot calculate MACD: Empty DataFrame or missing '{price_column}' column")
             return df
         
+        # Check if enough data points exist for calculation
+        if len(df) < max(fast_period, slow_period, signal_period):
+            logger.warning(f"Cannot calculate MACD: Not enough data points. Need at least {max(fast_period, slow_period, signal_period)}, but got {len(df)}.")
+            return df
+        
         result_df = df.copy()
         
-        # Calculate MACD
-        macd = ta.macd(result_df[price_column], fast=fast_period, slow=slow_period, signal=signal_period)
-        
-        # Add the columns to the DataFrame
-        result_df['macd'] = macd[f'MACD_{fast_period}_{slow_period}_{signal_period}']
-        result_df['macd_signal'] = macd[f'MACDs_{fast_period}_{slow_period}_{signal_period}']
-        result_df['macd_histogram'] = macd[f'MACDh_{fast_period}_{slow_period}_{signal_period}']
-        
-        # Add MACD signal
-        result_df['macd_bullish'] = (result_df['macd'] > result_df['macd_signal']).astype(int)
-        result_df['macd_bearish'] = (result_df['macd'] < result_df['macd_signal']).astype(int)
+        try:
+            # Calculate MACD
+            macd = ta.macd(result_df[price_column], fast=fast_period, slow=slow_period, signal=signal_period)
+            
+            # Check if MACD calculation returned valid results
+            if macd is None:
+                logger.warning(f"MACD calculation returned None. Using manual calculation as fallback.")
+                # Manual calculation as fallback
+                fast_ema = result_df[price_column].ewm(span=fast_period, adjust=False).mean()
+                slow_ema = result_df[price_column].ewm(span=slow_period, adjust=False).mean()
+                result_df['macd'] = fast_ema - slow_ema
+                result_df['macd_signal'] = result_df['macd'].ewm(span=signal_period, adjust=False).mean()
+                result_df['macd_histogram'] = result_df['macd'] - result_df['macd_signal']
+            else:
+                # Try to extract values from return data structure
+                try:
+                    # Different versions of pandas-ta might have different column naming
+                    if f'MACD_{fast_period}_{slow_period}_{signal_period}' in macd.columns:
+                        result_df['macd'] = macd[f'MACD_{fast_period}_{slow_period}_{signal_period}']
+                        result_df['macd_signal'] = macd[f'MACDs_{fast_period}_{slow_period}_{signal_period}']
+                        result_df['macd_histogram'] = macd[f'MACDh_{fast_period}_{slow_period}_{signal_period}']
+                    elif 'MACD' in macd.columns:
+                        result_df['macd'] = macd['MACD']
+                        result_df['macd_signal'] = macd['MACDs']
+                        result_df['macd_histogram'] = macd['MACDh']
+                    else:
+                        # General case - try to use the first three columns
+                        macd_cols = macd.columns.tolist()
+                        if len(macd_cols) >= 3:
+                            result_df['macd'] = macd[macd_cols[0]]
+                            result_df['macd_signal'] = macd[macd_cols[1]]
+                            result_df['macd_histogram'] = macd[macd_cols[2]]
+                        else:
+                            raise ValueError("Unexpected MACD result format")
+                except Exception as e:
+                    logger.warning(f"Error processing MACD results: {e}. Using manual calculation.")
+                    # Manual calculation as fallback
+                    fast_ema = result_df[price_column].ewm(span=fast_period, adjust=False).mean()
+                    slow_ema = result_df[price_column].ewm(span=slow_period, adjust=False).mean()
+                    result_df['macd'] = fast_ema - slow_ema
+                    result_df['macd_signal'] = result_df['macd'].ewm(span=signal_period, adjust=False).mean()
+                    result_df['macd_histogram'] = result_df['macd'] - result_df['macd_signal']
+            
+            # Add MACD signal
+            result_df['macd_bullish'] = (result_df['macd'] > result_df['macd_signal']).astype(int)
+            result_df['macd_bearish'] = (result_df['macd'] < result_df['macd_signal']).astype(int)
+            
+        except Exception as e:
+            logger.error(f"Error calculating MACD: {e}")
+            # Don't modify the DataFrame if calculation failed
         
         return result_df
     
@@ -314,45 +358,67 @@ class TechnicalIndicators:
             logger.warning("Cannot calculate Ichimoku Cloud: Empty DataFrame or missing required columns")
             return df
         
+        # Check if we have enough data
+        if len(df) < max(conversion_period, base_period, lagging_span_period, displacement):
+            logger.warning(f"Not enough data for Ichimoku Cloud. Need at least {max(conversion_period, base_period, lagging_span_period, displacement)} points, but got {len(df)}.")
+            return df
+            
         result_df = df.copy()
         
         try:
-            # Calculate Ichimoku Cloud - handle both DataFrame and tuple return types
-            ichimoku = ta.ichimoku(result_df['high'], result_df['low'], result_df['close'],
-                                 conversion=conversion_period,
-                                 base=base_period,
-                                 lagging=lagging_span_period,
-                                 displacement=displacement)
-            
-            # Check if ichimoku is a tuple (older versions of pandas-ta) or DataFrame (newer versions)
-            if isinstance(ichimoku, tuple):
-                # Unpack the tuple (assuming standard order of components)
-                if len(ichimoku) >= 5:
-                    result_df['tenkan_sen'] = ichimoku[0]  # Conversion line
-                    result_df['kijun_sen'] = ichimoku[1]   # Base line
-                    result_df['senkou_span_a'] = ichimoku[2]  # Leading span A
-                    result_df['senkou_span_b'] = ichimoku[3]  # Leading span B
-                    result_df['chikou_span'] = ichimoku[4]   # Lagging span
-                else:
-                    logger.warning("Ichimoku Cloud tuple has unexpected length")
-            else:
-                # It's a DataFrame, so add columns to the result DataFrame
-                for column in ichimoku.columns:
-                    result_df[column.lower()] = ichimoku[column]
-            
-            # Add signal columns - adjust column names based on how they were added
-            if 'senkou_span_a' in result_df.columns and 'senkou_span_b' in result_df.columns:
-                # Use these column names if they exist
+            # Calculate Ichimoku Cloud components manually if needed
+            # This is a fallback in case pandas_ta has issues
+            if True:  # Always use manual calculation for consistency
+                # Tenkan-sen (Conversion Line): (highest high + lowest low)/2 for the past 9 periods
+                high_9 = result_df['high'].rolling(window=conversion_period).max()
+                low_9 = result_df['low'].rolling(window=conversion_period).min()
+                result_df['tenkan_sen'] = (high_9 + low_9) / 2
+                
+                # Kijun-sen (Base Line): (highest high + lowest low)/2 for the past 26 periods
+                high_26 = result_df['high'].rolling(window=base_period).max()
+                low_26 = result_df['low'].rolling(window=base_period).min()
+                result_df['kijun_sen'] = (high_26 + low_26) / 2
+                
+                # Senkou Span A (Leading Span A): (Conversion Line + Base Line)/2 displaced forward 26 periods
+                result_df['senkou_span_a'] = ((result_df['tenkan_sen'] + result_df['kijun_sen']) / 2).shift(displacement)
+                
+                # Senkou Span B (Leading Span B): (highest high + lowest low)/2 for the past 52 periods, displaced forward 26 periods
+                high_52 = result_df['high'].rolling(window=lagging_span_period).max()
+                low_52 = result_df['low'].rolling(window=lagging_span_period).min()
+                result_df['senkou_span_b'] = ((high_52 + low_52) / 2).shift(displacement)
+                
+                # Chikou Span (Lagging Span): Close price shifted backwards 26 periods
+                result_df['chikou_span'] = result_df['close'].shift(-displacement)
+                
+                # Add signal columns
                 result_df['ichimoku_bullish'] = ((result_df['senkou_span_a'] > result_df['senkou_span_b']) & 
                                              (result_df['close'] > result_df['senkou_span_a'])).astype(int)
                 result_df['ichimoku_bearish'] = ((result_df['senkou_span_a'] < result_df['senkou_span_b']) & 
                                              (result_df['close'] < result_df['senkou_span_a'])).astype(int)
-            elif 'isa' in result_df.columns and 'isb' in result_df.columns:
-                # Use these column names as a fallback
-                result_df['ichimoku_bullish'] = ((result_df['isa'] > result_df['isb']) & 
-                                             (result_df['close'] > result_df['isa'])).astype(int)
-                result_df['ichimoku_bearish'] = ((result_df['isa'] < result_df['isb']) & 
-                                             (result_df['close'] < result_df['isa'])).astype(int)
+            else:
+                # Try using pandas_ta implementation (kept as reference but not used)
+                ichimoku = ta.ichimoku(result_df['high'], result_df['low'], result_df['close'],
+                                    conversion=conversion_period,
+                                    base=base_period,
+                                    lagging=lagging_span_period,
+                                    displacement=displacement)
+                
+                # Check if ichimoku is a tuple (older versions of pandas-ta) or DataFrame (newer versions)
+                if isinstance(ichimoku, tuple):
+                    # Unpack the tuple (assuming standard order of components)
+                    if len(ichimoku) >= 5:
+                        result_df['tenkan_sen'] = ichimoku[0]  # Conversion line
+                        result_df['kijun_sen'] = ichimoku[1]   # Base line
+                        result_df['senkou_span_a'] = ichimoku[2]  # Leading span A
+                        result_df['senkou_span_b'] = ichimoku[3]  # Leading span B
+                        result_df['chikou_span'] = ichimoku[4]   # Lagging span
+                    else:
+                        logger.warning("Ichimoku Cloud tuple has unexpected length")
+                        # Fall back to manual calculation (code would go here)
+                else:
+                    # It's a DataFrame, so add columns to the result DataFrame
+                    for column in ichimoku.columns:
+                        result_df[column.lower()] = ichimoku[column]
             
         except Exception as e:
             logger.error(f"Error calculating Ichimoku Cloud: {e}")
@@ -559,25 +625,63 @@ class PatternRecognition:
         
         result_df = df.copy()
         
+        # Check if we have enough data for the required moving averages
+        if len(df) < max(short_period, long_period):
+            logger.warning(f"Not enough data for trend detection. Need at least {max(short_period, long_period)} points, but got {len(df)}.")
+            # Use shorter periods if we don't have enough data
+            adjusted_short_period = min(short_period, len(df) // 3)
+            adjusted_long_period = min(long_period, len(df) // 2)
+            
+            if adjusted_short_period >= 5 and adjusted_long_period > adjusted_short_period:
+                logger.info(f"Using adjusted periods: short_period={adjusted_short_period}, long_period={adjusted_long_period}")
+                short_period = adjusted_short_period
+                long_period = adjusted_long_period
+            else:
+                # Add placeholder columns with neutral values
+                result_df['uptrend'] = 0
+                result_df['downtrend'] = 0
+                result_df['trend_strength'] = 0
+                result_df['golden_cross'] = 0
+                result_df['death_cross'] = 0
+                return result_df
+        
         # Calculate moving averages if not already present
         if f'sma_{short_period}' not in result_df.columns:
-            result_df[f'sma_{short_period}'] = ta.sma(result_df[price_column], length=short_period)
+            try:
+                result_df[f'sma_{short_period}'] = ta.sma(result_df[price_column], length=short_period)
+            except Exception as e:
+                logger.warning(f"Error calculating SMA-{short_period}: {e}. Using pandas implementation.")
+                result_df[f'sma_{short_period}'] = result_df[price_column].rolling(window=short_period).mean()
         
         if f'sma_{long_period}' not in result_df.columns:
-            result_df[f'sma_{long_period}'] = ta.sma(result_df[price_column], length=long_period)
+            try:
+                result_df[f'sma_{long_period}'] = ta.sma(result_df[price_column], length=long_period)
+            except Exception as e:
+                logger.warning(f"Error calculating SMA-{long_period}: {e}. Using pandas implementation.")
+                result_df[f'sma_{long_period}'] = result_df[price_column].rolling(window=long_period).mean()
+        
+        # Handle NaN values in moving averages
+        result_df[f'sma_{short_period}'] = result_df[f'sma_{short_period}'].fillna(result_df[price_column])
+        result_df[f'sma_{long_period}'] = result_df[f'sma_{long_period}'].fillna(result_df[price_column])
         
         # Determine trend based on moving average relationship
         result_df['uptrend'] = (result_df[f'sma_{short_period}'] > result_df[f'sma_{long_period}']).astype(int)
         result_df['downtrend'] = (result_df[f'sma_{short_period}'] < result_df[f'sma_{long_period}']).astype(int)
         
         # Determine trend strength based on price distance from moving averages
-        result_df['trend_strength'] = abs(result_df[f'sma_{short_period}'] - result_df[f'sma_{long_period}']) / result_df[price_column] * 100
+        result_df['trend_strength'] = (abs(result_df[f'sma_{short_period}'] - result_df[f'sma_{long_period}']) / 
+                                     result_df[price_column] * 100).fillna(0)
         
-        # Detect crossovers
-        result_df['golden_cross'] = ((result_df[f'sma_{short_period}'] > result_df[f'sma_{long_period}']) & 
-                                    (result_df[f'sma_{short_period}'].shift(1) <= result_df[f'sma_{long_period}'].shift(1))).astype(int)
+        # Detect crossovers - handle potential NaN values from shift operation
+        short_ma_curr = result_df[f'sma_{short_period}'].fillna(0)
+        short_ma_prev = result_df[f'sma_{short_period}'].shift(1).fillna(0)
+        long_ma_curr = result_df[f'sma_{long_period}'].fillna(0)
+        long_ma_prev = result_df[f'sma_{long_period}'].shift(1).fillna(0)
         
-        result_df['death_cross'] = ((result_df[f'sma_{short_period}'] < result_df[f'sma_{long_period}']) & 
-                                   (result_df[f'sma_{short_period}'].shift(1) >= result_df[f'sma_{long_period}'].shift(1))).astype(int)
+        result_df['golden_cross'] = ((short_ma_curr > long_ma_curr) & 
+                                   (short_ma_prev <= long_ma_prev)).astype(int)
+        
+        result_df['death_cross'] = ((short_ma_curr < long_ma_curr) & 
+                                  (short_ma_prev >= long_ma_prev)).astype(int)
         
         return result_df
