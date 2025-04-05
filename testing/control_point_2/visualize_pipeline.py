@@ -36,14 +36,14 @@ def create_pipeline_visualization():
     # Define component positions and sizes
     components = [
         # Row 1 - Data acquisition and preprocessing
-        {'name': 'Data Sources', 'x': 100, 'y': 450, 'width': 250, 'height': 120, 'color': colors['data'],
+        {'name': 'Data Sources', 'x': 30, 'y': 450, 'width': 250, 'height': 125, 'color': colors['data'],
          'features': [
              '• Alpha Vantage API',
              '• Yahoo Finance API',
              '• Future: Direct Exchange APIs'
          ]},
         
-        {'name': 'Data Fetcher', 'x': 450, 'y': 450, 'width': 250, 'height': 120, 'color': colors['data'],
+        {'name': 'Data Fetcher', 'x': 380, 'y': 450, 'width': 250, 'height': 125, 'color': colors['data'],
          'features': [
              '• Historical Data Retrieval',
              '• Interval Selection',
@@ -51,7 +51,7 @@ def create_pipeline_visualization():
              '• Error Handling'
          ]},
         
-        {'name': 'Data Preprocessor', 'x': 800, 'y': 450, 'width': 250, 'height': 120, 'color': colors['process'],
+        {'name': 'Data Preprocessor', 'x': 730, 'y': 450, 'width': 250, 'height': 125, 'color': colors['process'],
          'features': [
              '• Cleaning',
              '• Normalization',
@@ -60,7 +60,7 @@ def create_pipeline_visualization():
          ]},
         
         # Row 2 - Analysis components
-        {'name': 'Technical Indicators', 'x': 100, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+        {'name': 'Technical Indicators', 'x': 20, 'y': 250, 'width': 320, 'height': 125, 'color': colors['analysis'],
          'features_col1': [
              '• RSI',
              '• MACD',
@@ -72,7 +72,7 @@ def create_pipeline_visualization():
              '• Volatility Metrics'
          ]},
         
-        {'name': 'Pattern Recognition', 'x': 450, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+        {'name': 'Pattern Recognition', 'x': 380, 'y': 250, 'width': 250, 'height': 125, 'color': colors['analysis'],
          'features': [
              '• Candlestick Patterns',
              '• Support & Resistance',
@@ -80,7 +80,7 @@ def create_pipeline_visualization():
              '• Chart Patterns'
          ]},
         
-        {'name': 'Signal Generation', 'x': 800, 'y': 250, 'width': 250, 'height': 120, 'color': colors['analysis'],
+        {'name': 'Signal Generation', 'x': 730, 'y': 250, 'width': 250, 'height': 125, 'color': colors['analysis'],
          'features': [
              '• Buy/Sell Signals',
              '• Strategy Combination',
@@ -89,7 +89,7 @@ def create_pipeline_visualization():
          ]},
         
         # Row 3 - Storage component (wider)
-        {'name': 'MongoDB Storage', 'x': 450, 'y': 100, 'width': 250, 'height': 120, 'color': colors['storage'],
+        {'name': 'MongoDB Storage', 'x': 280, 'y': 50, 'width': 450, 'height': 125, 'color': colors['storage'],
          'features_col1': [
              '• Historical Data Collection',
              '• Pattern Storage',
@@ -130,7 +130,7 @@ def create_pipeline_visualization():
     plt.figtext(0.5, 0.95, "MakesALot Trading Bot - Data Pipeline (Control Point 2)", 
               fontsize=20, fontweight='bold', ha='center')
     
-    plt.figtext(0.5, 0.91, "Data Flow: Market data is fetched from APIs, preprocessed, analyzed using technical indicators,\n"
+    plt.figtext(0.5, 0.88, "Data Flow: Market data is fetched from APIs, preprocessed, analyzed using technical indicators,\n"
                 "patterns are identified, trading signals are generated, and all information is stored in MongoDB.", 
                 fontsize=12, ha='center')
     
@@ -138,7 +138,7 @@ def create_pipeline_visualization():
     add_legend(ax, colors)
     
     # Add watermark
-    plt.figtext(0.5, 0.03, "MakesALot Trading Bot - Control Point 2 - April 2025", 
+    plt.figtext(0.5, 0.01, "MakesALot Trading Bot - Control Point 2 - April 2025", 
                 ha='center', fontsize=9, color='gray')
     
     # Save the visualization
@@ -232,7 +232,7 @@ def draw_connection(ax, connection, components, colors):
             start_y = source['y']
             end_x = target['x'] + target['width']/2 + 40
             end_y = target['y'] + target['height']
-            curve = -0.3  # Negative curve
+            curve = 0.05  
         
         # For storage connections
         elif target['name'] == 'MongoDB Storage':
@@ -248,7 +248,7 @@ def draw_connection(ax, connection, components, colors):
                 start_y = source['y']
                 end_x = target['x'] + 3*target['width']/4
                 end_y = target['y'] + target['height']
-                curve = 0.1
+                curve = 0.15
             else:  # Center aligned components
                 start_x = source['x'] + source['width']/2
                 start_y = source['y']
@@ -300,7 +300,7 @@ def add_legend(ax, colors):
     # Create legend box
     legend = ax.legend(handles=legend_elements, 
                loc='upper center',
-               bbox_to_anchor=(0.5, 0),
+               bbox_to_anchor=(0.5, 0.05),
                title='Component Types and Connections',
                ncol=3,
                frameon=True, 
