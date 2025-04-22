@@ -6,12 +6,12 @@ import pandas as pd
 import pandas_ta as ta
 from scipy import stats
 from scipy.signal import find_peaks
-import talib
-from statsmodels.tsa.stattools import adfuller
+from advanced_feature_engineering import AdvancedFeatureEngineering  # ajuste conforme o caminho real
+
+from src.indicators.technical import TechnicalIndicators, PatternRecognition
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
 
 class AdvancedFeatureEngineering:
     """
@@ -304,169 +304,54 @@ class AdvancedFeatureEngineering:
             return data
     
     def create_pattern_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Create features based on candlestick patterns and chart patterns.
-        
-        Args:
-            data: DataFrame with OHLCV data
-            
-        Returns:
-            DataFrame with additional pattern-based features
-        """
         if not self.enable_pattern_features:
             return data
-            
+
         result = data.copy()
-        
-        # Check if required columns exist
         required_cols = ['open', 'high', 'low', 'close']
         if not all(col.lower() in map(str.lower, data.columns) for col in required_cols):
             logger.warning(f"Missing required columns for pattern features. Required: {required_cols}")
             return data
-        
+
+        col_map = {req_col: col for req_col in required_cols for col in data.columns if col.lower() == req_col}
+        ohlc = result[[col_map.get(c) for c in required_cols if c in col_map]]
+        ohlc.columns = [c.lower() for c in ohlc.columns]
+
+        # Detetar padrões básicos manualmente
+        high_series, low_series = ohlc['high'], ohlc['low']
+        result['higher_high_3'] = ((high_series > high_series.shift(1)) & (high_series.shift(1) > high_series.shift(2))).astype(int)
+        result['lower_low_3'] = ((low_series < low_series.shift(1)) & (low_series.shift(1) < low_series.shift(2))).astype(int)
+
         try:
-            # Map column names (case-insensitive)
-            col_map = {}
-            for req_col in required_cols:
-                for col in data.columns:
-                    if col.lower() == req_col:
-                        col_map[req_col] = col
-            
-            # Extract mapped columns
-            ohlc = result[[col_map.get(c) for c in required_cols if c in col_map]]
-            
-            # Rename columns to standard lowercase
-            ohlc.columns = [c.lower() for c in ohlc.columns]
-            
-            try:
-                # Use TALib for candlestick pattern recognition
-                # Bullish patterns
-                result['hammer'] = talib.CDLHAMMER(ohlc['open'].values, ohlc['high'].values, 
-                                                 ohlc['low'].values, ohlc['close'].values)
-                result['inverted_hammer'] = talib.CDLINVERTEDHAMMER(ohlc['open'].values, ohlc['high'].values, 
-                                                                  ohlc['low'].values, ohlc['close'].values)
-                result['engulfing_bullish'] = talib.CDLENGULFING(ohlc['open'].values, ohlc['high'].values, 
-                                                               ohlc['low'].values, ohlc['close'].values)
-                result['morning_star'] = talib.CDLMORNINGSTAR(ohlc['open'].values, ohlc['high'].values, 
-                                                            ohlc['low'].values, ohlc['close'].values)
-                
-                # Bearish patterns
-                result['hanging_man'] = talib.CDLHANGINGMAN(ohlc['open'].values, ohlc['high'].values, 
-                                                          ohlc['low'].values, ohlc['close'].values)
-                result['shooting_star'] = talib.CDLSHOOTINGSTAR(ohlc['open'].values, ohlc['high'].values, 
-                                                              ohlc['low'].values, ohlc['close'].values)
-                result['evening_star'] = talib.CDLEVENINGSTAR(ohlc['open'].values, ohlc['high'].values, 
-                                                            ohlc['low'].values, ohlc['close'].values)
-                
-                # Combined patterns
-                result['three_white_soldiers'] = talib.CDL3WHITESOLDIERS(ohlc['open'].values, ohlc['high'].values, 
-                                                                        ohlc['low'].values, ohlc['close'].values)
-                result['three_black_crows'] = talib.CDL3BLACKCROWS(ohlc['open'].values, ohlc['high'].values, 
-                                                                 ohlc['low'].values, ohlc['close'].values)
-                
-                # Doji patterns
-                result['doji'] = talib.CDLDOJI(ohlc['open'].values, ohlc['high'].values, 
-                                              ohlc['low'].values, ohlc['close'].values)
-                result['dragonfly_doji'] = talib.CDLDRAGONFLYDOJI(ohlc['open'].values, ohlc['high'].values, 
-                                                                 ohlc['low'].values, ohlc['close'].values)
-                
-                # More patterns
-                result['harami'] = talib.CDLHARAMI(ohlc['open'].values, ohlc['high'].values, 
-                                                  ohlc['low'].values, ohlc['close'].values)
-                result['harami_cross'] = talib.CDLHARAMICROSS(ohlc['open'].values, ohlc['high'].values, 
-                                                            ohlc['low'].values, ohlc['close'].values)
-                
-                # Convert pattern signals to binary (0 or 1) for both bullish and bearish
-                for col in result.columns:
-                    if col.startswith('hammer') or col.startswith('inverted') or col.startswith('engulfing') or \
-                       col.startswith('morning') or col.startswith('three_white'):
-                        # These are bullish patterns when positive
-                        result[f'{col}_bullish'] = (result[col] > 0).astype(int)
-                    elif col.startswith('hanging') or col.startswith('shooting') or col.startswith('evening') or \
-                         col.startswith('three_black'):
-                        # These are bearish patterns when positive
-                        result[f'{col}_bearish'] = (result[col] > 0).astype(int)
-                    elif col.startswith('doji') or col.startswith('harami'):
-                        # These can be both bullish or bearish depending on sign
-                        result[f'{col}_bullish'] = (result[col] > 0).astype(int)
-                        result[f'{col}_bearish'] = (result[col] < 0).astype(int)
-                
-                # Drop the original pattern columns that have values like 100, -100
-                pattern_cols = [col for col in result.columns if col in [
-                    'hammer', 'inverted_hammer', 'engulfing_bullish', 'morning_star',
-                    'hanging_man', 'shooting_star', 'evening_star', 'three_white_soldiers',
-                    'three_black_crows', 'doji', 'dragonfly_doji', 'harami', 'harami_cross'
-                ]]
-                result = result.drop(columns=pattern_cols)
-                
-                logger.info(f"Created {result.shape[1] - data.shape[1]} candlestick pattern features")
-                
-            except Exception as e:
-                logger.warning(f"Could not create TALib pattern features: {e}")
-            
-            # Manually create pattern features
-            # Higher high and lower low patterns
-            high_series = ohlc['high']
-            low_series = ohlc['low']
-            
-            # Higher highs and lower lows
-            result['higher_high_3'] = ((high_series > high_series.shift(1)) & 
-                                      (high_series.shift(1) > high_series.shift(2))).astype(int)
-            result['lower_low_3'] = ((low_series < low_series.shift(1)) & 
-                                    (low_series.shift(1) < low_series.shift(2))).astype(int)
-            
-            # Double top and double bottom detection (simplified version)
-            # Find peaks in price series
-            try:
-                # Peak detection for double tops
-                highs = ohlc['high'].values
-                lows = ohlc['low'].values
-                
-                # Find peaks with minimum distance of 5 bars and prominence of 1% of price
-                min_distance = 5
-                prominence = np.nanmean(highs) * 0.01
-                
-                high_peaks, _ = find_peaks(highs, distance=min_distance, prominence=prominence)
-                low_peaks, _ = find_peaks(-lows, distance=min_distance, prominence=prominence)
-                
-                # Initialize double top/bottom columns
-                result['double_top'] = 0
-                result['double_bottom'] = 0
-                
-                # Check for double tops
-                if len(high_peaks) >= 2:
-                    for i in range(1, len(high_peaks)):
-                        # Look for two peaks with similar heights
-                        peak1_idx = high_peaks[i-1]
-                        peak2_idx = high_peaks[i]
-                        
-                        # If peaks are close enough in price (within 0.5%)
-                        price_diff_pct = abs(highs[peak2_idx] - highs[peak1_idx]) / highs[peak1_idx]
-                        if price_diff_pct < 0.005 and peak2_idx - peak1_idx < 20:  # Within 20 bars
-                            result.iloc[peak2_idx, result.columns.get_loc('double_top')] = 1
-                
-                # Check for double bottoms
-                if len(low_peaks) >= 2:
-                    for i in range(1, len(low_peaks)):
-                        # Look for two troughs with similar heights
-                        trough1_idx = low_peaks[i-1]
-                        trough2_idx = low_peaks[i]
-                        
-                        # If troughs are close enough in price (within 0.5%)
-                        price_diff_pct = abs(lows[trough2_idx] - lows[trough1_idx]) / lows[trough1_idx]
-                        if price_diff_pct < 0.005 and trough2_idx - trough1_idx < 20:  # Within 20 bars
-                            result.iloc[trough2_idx, result.columns.get_loc('double_bottom')] = 1
-                
-                logger.info("Created double top/bottom pattern features")
-            
-            except Exception as e:
-                logger.warning(f"Error creating peak detection features: {e}")
-            
-            return result
-            
+            highs = ohlc['high'].values
+            lows = ohlc['low'].values
+            min_distance = 5
+            prominence = np.nanmean(highs) * 0.01
+            high_peaks, _ = find_peaks(highs, distance=min_distance, prominence=prominence)
+            low_peaks, _ = find_peaks(-lows, distance=min_distance, prominence=prominence)
+            result['double_top'] = 0
+            result['double_bottom'] = 0
+
+            if len(high_peaks) >= 2:
+                for i in range(1, len(high_peaks)):
+                    p1, p2 = high_peaks[i-1], high_peaks[i]
+                    diff = abs(highs[p2] - highs[p1]) / highs[p1]
+                    if diff < 0.005 and p2 - p1 < 20:
+                        result.iloc[p2, result.columns.get_loc('double_top')] = 1
+
+            if len(low_peaks) >= 2:
+                for i in range(1, len(low_peaks)):
+                    t1, t2 = low_peaks[i-1], low_peaks[i]
+                    diff = abs(lows[t2] - lows[t1]) / lows[t1]
+                    if diff < 0.005 and t2 - t1 < 20:
+                        result.iloc[t2, result.columns.get_loc('double_bottom')] = 1
+
+            logger.info("Created basic candlestick pattern features")
+
         except Exception as e:
-            logger.error(f"Error creating pattern features: {e}")
-            return data
+            logger.warning(f"Error creating peak detection features: {e}")
+
+        return result
     
     def create_statistical_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -647,146 +532,39 @@ class AdvancedFeatureEngineering:
             return data
     
     def create_market_regime_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Create features that identify market regimes (trend, mean-reverting, volatile).
-        
-        Args:
-            data: DataFrame with price data
-            
-        Returns:
-            DataFrame with market regime features
-        """
         result = data.copy()
-        
-        # Check if close price column exists
-        if 'close' not in result.columns and 'Close' in result.columns:
-            price_col = 'Close'
-        else:
-            price_col = 'close'
-            
+        price_col = 'close' if 'close' in result.columns else 'Close'
         if price_col not in result.columns:
             logger.warning(f"Column {price_col} not found for market regime features")
             return data
-        
+
         try:
-            # Trend strength features
             for window in [10, 20, 50]:
-                # ADX for trend strength
-                if f'ADX_{window}' in result.columns:
-                    # ADX > 25 typically indicates a trend
+                if 'high' in result.columns and 'low' in result.columns:
+                    adx_df = ta.adx(high=result['high'], low=result['low'], close=result[price_col], length=window)
+                    result = pd.concat([result, adx_df], axis=1)
                     result[f'is_trending_{window}'] = (result[f'ADX_{window}'] > 25).astype(int)
-                elif 'high' in result.columns and 'low' in result.columns:
-                    try:
-                        # Calculate ADX if not present
-                        adx = talib.ADX(result['high'].values, 
-                                      result['low'].values, 
-                                      result[price_col].values, 
-                                      timeperiod=window)
-                        result[f'ADX_{window}'] = adx
-                        result[f'is_trending_{window}'] = (result[f'ADX_{window}'] > 25).astype(int)
-                    except Exception as e:
-                        logger.warning(f"Could not calculate ADX: {e}")
-                
-                # Directional movement - bullish vs bearish trend
+
                 if f'DI+_{window}' in result.columns and f'DI-_{window}' in result.columns:
-                    result[f'trend_direction_{window}'] = np.where(
-                        result[f'DI+_{window}'] > result[f'DI-_{window}'], 1, -1)
-                
-                # Trend intensity based on price vs MA
+                    result[f'trend_direction_{window}'] = np.where(result[f'DI+_{window}'] > result[f'DI-_{window}'], 1, -1)
+
                 ma_col = f'sma_{window}'
                 if ma_col in result.columns:
-                    # Distance from MA normalized by ATR for volatility adjustment
-                    atr_col = f'atr_{window}' if f'atr_{window}' in result.columns else None
-                    
-                    if atr_col:
-                        result[f'ma_trend_intensity_{window}'] = (
-                            (result[price_col] - result[ma_col]) / result[atr_col]
-                        )
-                    else:
-                        # Use std dev if ATR not available
-                        std = result[price_col].rolling(window).std()
-                        result[f'ma_trend_intensity_{window}'] = (
-                            (result[price_col] - result[ma_col]) / std
-                        )
-                    
-                    # Trend direction based on price vs MA
+                    atr_col = f'atr_{window}'
+                    if atr_col not in result.columns:
+                        result[atr_col] = ta.atr(high=result['high'], low=result['low'], close=result[price_col], length=window)
+
+                    result[f'ma_trend_intensity_{window}'] = (result[price_col] - result[ma_col]) / result[atr_col]
                     result[f'above_ma_{window}'] = (result[price_col] > result[ma_col]).astype(int)
-                    
-                    # MA slope as trend direction indicator
                     result[f'ma_slope_{window}'] = result[ma_col].diff(5) / result[ma_col].shift(5)
-            
-            # Volatility regime features
-            for window in [10, 20, 50]:
-                # Calculate historical volatility if not already done
-                if f'atr_{window}' not in result.columns and 'high' in result.columns and 'low' in result.columns:
-                    try:
-                        result[f'atr_{window}'] = talib.ATR(result['high'].values,
-                                                         result['low'].values,
-                                                         result[price_col].values,
-                                                         timeperiod=window)
-                    except Exception as e:
-                        logger.warning(f"Could not calculate ATR: {e}")
-                
-                # Calculate historical volatility as annualized std of returns
-                returns = result[price_col].pct_change()
-                result[f'hist_vol_{window}'] = returns.rolling(window).std() * np.sqrt(252)  # Annualized
-                
-                # Volatility regime (high/low) based on percentile
-                vol_series = result[f'hist_vol_{window}']
-                if len(vol_series.dropna()) > 100:  # Need sufficient data for percentiles
-                    high_vol_threshold = vol_series.quantile(0.8)
-                    low_vol_threshold = vol_series.quantile(0.2)
-                    
-                    result[f'high_vol_regime_{window}'] = (vol_series > high_vol_threshold).astype(int)
-                    result[f'low_vol_regime_{window}'] = (vol_series < low_vol_threshold).astype(int)
-            
-            # Mean-reversion regime features
-            for window in [10, 20, 50]:
-                # RSI as mean-reversion indicator
-                rsi_col = f'rsi_{window}'
-                if rsi_col in result.columns:
-                    # Extreme RSI values indicate potential mean-reversion
-                    result[f'oversold_{window}'] = (result[rsi_col] < 30).astype(int)
-                    result[f'overbought_{window}'] = (result[rsi_col] > 70).astype(int)
-                
-                # Bollinger Band width as indicator of potential mean-reversion
-                if 'BBU_20_2.0' in result.columns and 'BBL_20_2.0' in result.columns:
-                    # Narrow bands often precede volatility expansion
-                    bb_width = (result['BBU_20_2.0'] - result['BBL_20_2.0']) / result['BBM_20_2.0']
-                    result[f'narrow_bb_{window}'] = (
-                        bb_width < bb_width.rolling(window*5).quantile(0.2)
-                    ).astype(int)
-                    
-                    # Price near bands indicates potential mean-reversion
-                    result[f'near_upper_band_{window}'] = (
-                        (result[price_col] > result['BBU_20_2.0'] * 0.95) & 
-                        (result[price_col] < result['BBU_20_2.0'])
-                    ).astype(int)
-                    
-                    result[f'near_lower_band_{window}'] = (
-                        (result[price_col] < result['BBL_20_2.0'] * 1.05) & 
-                        (result[price_col] > result['BBL_20_2.0'])
-                    ).astype(int)
-            
-            # Composite regime indicators
-            if all(f'is_trending_{w}' in result.columns for w in [10, 20, 50]):
-                # Strong trend when multiple timeframes agree
-                result['strong_trend'] = (
-                    (result['is_trending_10'] & result['is_trending_20'] & result['is_trending_50'])
-                ).astype(int)
-            
-            if all(f'low_vol_regime_{w}' in result.columns for w in [10, 20, 50]):
-                # Persistent low volatility
-                result['persistent_low_vol'] = (
-                    (result['low_vol_regime_10'] & result['low_vol_regime_20'] & result['low_vol_regime_50'])
-                ).astype(int)
-            
-            logger.info(f"Created {result.shape[1] - data.shape[1]} market regime features")
+
+            logger.info("Created market regime features with pandas-ta")
             return result
-            
+
         except Exception as e:
             logger.error(f"Error creating market regime features: {e}")
             return data
+
     
     def create_sentiment_features(self, data: pd.DataFrame, 
                                 sentiment_data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
@@ -1206,3 +984,52 @@ class AdvancedFeatureEngineering:
         except Exception as e:
             logger.error(f"Error in feature engineering pipeline: {e}")
             return data
+        
+        
+
+    def test_feature_engineering_and_plotting(df):
+        logger.info("\n=== Testing Advanced Feature Engineering ===")
+
+        engine = AdvancedFeatureEngineering()
+        df_features = engine.apply_all_features(df)
+
+        # Verifica se temos coluna 'close'
+        if 'close' not in df_features.columns:
+            logger.error("Coluna 'close' não encontrada após feature engineering.")
+            return df_features
+
+        # Gráfico de suporte e resistência
+        plt.figure(figsize=(14, 6))
+        plt.plot(df_features['close'], label='Preço', color='black')
+        if 'support_level' in df_features.columns:
+            plt.plot(df_features['support_level'], label='Suporte', color='green', linestyle='--')
+        if 'resistance_level' in df_features.columns:
+            plt.plot(df_features['resistance_level'], label='Resistência', color='red', linestyle='--')
+        plt.title('Níveis de Suporte e Resistência')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig('testing/control_point_2/grafico_suporte_resistencia.png')
+        plt.close()
+
+        # Gráfico de padrões técnicos
+        plt.figure(figsize=(14, 6))
+        plt.plot(df_features['close'], label='Preço', color='black')
+        if 'double_top' in df_features.columns:
+            tops = df_features[df_features['double_top'] == 1]
+            plt.scatter(tops.index, tops['close'], color='red', marker='v', s=100, label='Double Top')
+        if 'double_bottom' in df_features.columns:
+            bottoms = df_features[df_features['double_bottom'] == 1]
+            plt.scatter(bottoms.index, bottoms['close'], color='green', marker='^', s=100, label='Double Bottom')
+        plt.title('Padrões Técnicos: Double Top / Bottom')
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig('testing/control_point_2/grafico_padroes_tecnicos.png')
+        plt.close()
+
+        logger.info("Gráficos salvos com sucesso:")
+        logger.info(" - grafico_suporte_resistencia.png")
+        logger.info(" - grafico_padroes_tecnicos.png")
+
+        return df_features

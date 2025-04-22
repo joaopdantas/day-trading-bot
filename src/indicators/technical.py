@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 import pandas_ta as ta
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates 
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +31,7 @@ class TechnicalIndicators:
         price_column: str = 'close'
     ) -> pd.DataFrame:
         """
-        Add simple moving averages for specified periods.
+        Add simple moving averages for specified periods, showing the curve from the beginning.
         
         Args:
             df: DataFrame with market data
@@ -46,7 +48,7 @@ class TechnicalIndicators:
         result_df = df.copy()
         
         for period in periods:
-            result_df[f'sma_{period}'] = ta.sma(result_df[price_column], length=period)
+            result_df[f'sma_{period}'] = result_df[price_column].rolling(window=period, min_periods=1).mean()
         
         return result_df
     
@@ -1248,115 +1250,85 @@ class CandlestickPatterns:
         
         return active_patterns
     
-    @staticmethod
-    def visualize_patterns(
-        df: pd.DataFrame,
-        window_size: int = 20,
-        save_path: Optional[str] = None
-    ) -> plt.Figure:
-        """
-        Create visualization of candlestick patterns in the data.
-        
-        Args:
-            df: DataFrame with pattern recognition columns
-            window_size: Number of candles to show in visualization
-            save_path: Optional path to save the visualization
-            
-        Returns:
-            Matplotlib figure object
-        """
-        if len(df) < 2:
-            logger.warning("Not enough data for candlestick visualization")
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.text(0.5, 0.5, "Insufficient data for visualization", 
-                   horizontalalignment='center', verticalalignment='center')
-            return fig
-        
-        # Get last window_size candles
-        plot_df = df.iloc[-window_size:].copy() if len(df) > window_size else df.copy()
-        
-        # Setup figure and axis
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={'height_ratios': [3, 1]})
-        
-        # Plot candlesticks
-        from mplfinance.original_flavor import candlestick_ohlc
-        import matplotlib.dates as mdates
-        
-        # Convert index to numeric format for plotting
-        plot_df = plot_df.reset_index()
-        if pd.api.types.is_datetime64_any_dtype(plot_df['index']):
-            plot_df['date_num'] = mdates.date2num(plot_df['index'])
-        else:
-            plot_df['date_num'] = range(len(plot_df))
-        
-        # Create OHLC data format
-        ohlc = plot_df[['date_num', 'open', 'high', 'low', 'close']].values
-        
-        # Plot candlesticks
-        candlestick_ohlc(ax1, ohlc, width=0.6, colorup='green', colordown='red')
-        
-        # Format x axis for dates if available
-        if pd.api.types.is_datetime64_any_dtype(plot_df['index']):
-            ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-            fig.autofmt_xdate()
-        
-        # Annotate patterns
-        y_range = plot_df['high'].max() - plot_df['low'].min()
-        
-        # Find pattern columns
-        pattern_columns = [col for col in plot_df.columns if col.startswith('pattern_')]
-        
-        # Loop through each candle and add annotations for patterns
-        for i, row in plot_df.iterrows():
-            patterns_found = []
-            for pattern in pattern_columns:
-                if row[pattern] == 1:
-                    # Convert pattern_snake_case to Pattern Name
-                    pattern_name = ' '.join(word.capitalize() for word in pattern.replace('pattern_', '').split('_'))
-                    patterns_found.append(pattern_name)
-            
-            if patterns_found:
-                # Determine if it should be above or below the candle
-                if row['close'] > row['open']:  # bullish candle
-                    y_pos = row['high'] + y_range * 0.02
-                    va = 'bottom'
-                else:  # bearish candle
-                    y_pos = row['low'] - y_range * 0.02
-                    va = 'top'
-                
-                # Add marker
-                ax1.annotate('⭐', (row['date_num'], y_pos), ha='center', va=va, fontsize=12)
-                
-                # If it's the last few candles, add pattern names
-                if i >= len(plot_df) - 5:
-                    ax1.annotate('\n'.join(patterns_found), 
-                               (row['date_num'], y_pos + y_range * (0.03 if va == 'bottom' else -0.03)), 
-                               ha='center', va=va, fontsize=8, rotation=45)
-        
-        # Add pattern strength indicators in bottom subplot
-        if 'candlestick_signal_strength' in plot_df.columns:
-            signal_strength = plot_df['candlestick_signal_strength']
-            bars = ax2.bar(plot_df['date_num'], signal_strength, width=0.6, 
-                         color=np.where(signal_strength >= 0, 'green', 'red'))
-            ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
-            ax2.set_title('Candlestick Pattern Signal Strength (Positive=Bullish, Negative=Bearish)')
-        
-        # Set titles
-        ax1.set_title('Candlestick Chart with Pattern Recognition')
-        ax1.set_ylabel('Price')
-        ax2.set_ylabel('Signal Strength')
-        
-        # Remove x-axis labels from top plot
-        plt.setp(ax1.get_xticklabels(), visible=False)
-        
-        # Adjust layout
-        plt.tight_layout()
-        
-        # Save if path provided
-        if save_path:
-            plt.savefig(save_path)
-        
+@staticmethod
+def visualize_patterns(
+    df: pd.DataFrame,
+    window_size: int = 20,
+    save_path: Optional[str] = None
+) -> pd.Figure:
+    """
+    Create visualization of candlestick patterns in the data.
+
+    Args:
+        df: DataFrame with pattern recognition columns
+        window_size: Number of candles to show in visualization
+        save_path: Optional path to save the visualization
+
+    Returns:
+        Matplotlib figure object
+    """
+    if len(df) < 2:
+        logger.warning("Not enough data for candlestick visualization")
+        fig, ax = pd.subplots(figsize=(10, 6))
+        ax.text(0.5, 0.5, "Insufficient data for visualization", 
+                horizontalalignment='center', verticalalignment='center')
         return fig
+
+    plot_df = df.iloc[-window_size:].copy() if len(df) > window_size else df.copy()
+    fig, (ax1, ax2) = pd.subplots(2, 1, figsize=(14, 10), gridspec_kw={'height_ratios': [3, 1]})
+
+    # Reset index and handle dates
+    plot_df = plot_df.reset_index()
+    if pd.api.types.is_datetime64_any_dtype(plot_df['index']):
+        plot_df['date_num'] = mdates.date2num(plot_df['index'])
+    else:
+        plot_df['date_num'] = range(len(plot_df))
+
+    y_range = plot_df['high'].max() - plot_df['low'].min()
+
+    # Candlestick manual
+    for i, row in plot_df.iterrows():
+        color = 'green' if row['close'] >= row['open'] else 'red'
+        ax1.plot([row['date_num'], row['date_num']], [row['low'], row['high']], color=color)
+        ax1.plot([row['date_num'], row['date_num']], [row['open'], row['close']], color=color, linewidth=4)
+
+    # Padrões
+    pattern_columns = [col for col in plot_df.columns if col.startswith('pattern_')]
+    for i, row in plot_df.iterrows():
+        patterns_found = [col.replace('pattern_', '').replace('_', ' ').title()
+                          for col in pattern_columns if row.get(col) == 1]
+
+        if patterns_found:
+            y_pos = row['high'] + y_range * 0.02 if row['close'] > row['open'] else row['low'] - y_range * 0.02
+            va = 'bottom' if row['close'] > row['open'] else 'top'
+
+            ax1.annotate('⭐', (row['date_num'], y_pos), ha='center', va=va, fontsize=12)
+            if i >= len(plot_df) - 5:
+                ax1.annotate('\n'.join(patterns_found),
+                             (row['date_num'], y_pos + y_range * (0.03 if va == 'bottom' else -0.03)),
+                             ha='center', va=va, fontsize=8, rotation=45)
+
+    # Signal Strength
+    if 'candlestick_signal_strength' in plot_df.columns:
+        signal_strength = plot_df['candlestick_signal_strength']
+        ax2.bar(plot_df['date_num'], signal_strength, width=0.6,
+                color=np.where(signal_strength >= 0, 'green', 'red'))
+        ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
+        ax2.set_title('Signal Strength')
+
+    ax1.set_title('Candlestick Chart with Pattern Recognition')
+    ax1.set_ylabel('Preço')
+    ax2.set_ylabel('Sinal')
+
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    fig.autofmt_xdate()
+    pd.setp(ax1.get_xticklabels(), visible=False)
+    pd.tight_layout()
+
+    if save_path:
+        pd.savefig(save_path)
+
+    return fig
     
 class TrendIdentification:
     """Advanced trend identification and analysis for trading algorithms."""
