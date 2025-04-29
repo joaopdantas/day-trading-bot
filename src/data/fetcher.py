@@ -133,7 +133,7 @@ class AlphaVantageAPI(MarketDataFetcher):
         try:
             response = requests.get(self.BASE_URL, params=params)
             response.raise_for_status()  # Raise exception for HTTP errors
-            
+            #print(response.text)
             data = response.json()
             
             # Extract time series data
