@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # Add parent directory to path to allow imports from src
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../..')))
 
-from src.data.fetcher import get_data_api
-from src.data.preprocessor import DataPreprocessor
 from src.indicators.technical import TechnicalIndicators, PatternRecognition
-
+from src.data.preprocessor import DataPreprocessor
+from src.data.fetcher import get_data_api
 
 def validate_trading_signal(df, index, pattern_name):
     """Validate trading signals using multiple technical indicators."""
@@ -43,52 +43,58 @@ def validate_trading_signal(df, index, pattern_name):
 
         # Buy conditions
         if any(x in pattern_name.lower() for x in ['bullish', 'hammer', 'doji']):
-            # RSI oversold condition
-            if rsi and rsi < 40:
+            # RSI oversold condition (more strict)
+            if rsi and rsi < 30:
                 signal_strength += 2
                 conditions_met.append("RSI")
 
-            # MACD crossover
-            if macd and macd_signal and macd > macd_signal:
-                signal_strength += 2
-                conditions_met.append("MACD")
+            # MACD bullish crossover with confirmation
+            if macd and macd_signal:
+                if macd > macd_signal and macd < 0:  # Crossing while below zero line
+                    signal_strength += 2
+                    conditions_met.append("MACD")
 
-            # Volume confirmation
-            if volume and avg_volume and volume > avg_volume * 1.5:
+            # Strong volume confirmation
+            if volume and avg_volume and volume > avg_volume * 2.0:
                 signal_strength += 1
                 conditions_met.append("VOL")
 
-            # Downtrend reversal
-            if price_change < -2:
+            # Look for downtrend for reversal opportunity
+            # Only add if other conditions exist
+            if price_change < -2 and len(conditions_met) > 0:
                 signal_strength += 1
                 conditions_met.append("TREND")
 
-            if signal_strength >= 3:
+            # Require stronger confirmation for buy signals
+            if signal_strength >= 4:
                 return True, "BUY", conditions_met
 
         # Sell conditions
         elif any(x in pattern_name.lower() for x in ['bearish', 'shooting']):
-            # RSI overbought condition
-            if rsi and rsi > 60:
+            # RSI overbought condition (more strict)
+            if rsi and rsi > 70:
                 signal_strength += 2
                 conditions_met.append("RSI")
 
-            # MACD crossover
-            if macd and macd_signal and macd < macd_signal:
-                signal_strength += 2
-                conditions_met.append("MACD")
+            # MACD bearish crossover with confirmation
+            if macd and macd_signal:
+                if macd < macd_signal and macd > 0:  # Crossing while above zero line
+                    signal_strength += 2
+                    conditions_met.append("MACD")
 
-            # Volume confirmation
-            if volume and avg_volume and volume > avg_volume * 1.5:
+            # Strong volume confirmation
+            if volume and avg_volume and volume > avg_volume * 2.0:
                 signal_strength += 1
                 conditions_met.append("VOL")
 
-            # Uptrend reversal
-            if price_change > 2:
+            # Look for uptrend for reversal opportunity
+            # Only add if other conditions exist
+            if price_change > 2 and len(conditions_met) > 0:
                 signal_strength += 1
                 conditions_met.append("TREND")
 
-            if signal_strength >= 3:
+            # Require stronger confirmation for sell signals
+            if signal_strength >= 4:
                 return True, "SELL", conditions_met
 
         return False, "", []
@@ -102,35 +108,35 @@ def fetch_and_process_data(symbol="MSFT", days=100):
     api = get_data_api("alpha_vantage")
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
-    
+
     df = api.fetch_historical_data(
-        symbol=symbol, 
+        symbol=symbol,
         interval="1d",
         start_date=start_date,
         end_date=end_date
     )
-    
+
     if df is None or df.empty:
         print("Failed to retrieve data. Check API key and connection.")
         return None
-    
+
     try:
         # Process data and add indicators
         preprocessor = DataPreprocessor()
         df = preprocessor.prepare_features(df)
         df = TechnicalIndicators.add_all_indicators(df)
         df = PatternRecognition.recognize_candlestick_patterns(df)
-        
+
         # Add support and resistance levels
         df = PatternRecognition.detect_support_resistance(df)
-        
+
         return df
     except Exception as e:
         print(f"Error processing data: {e}")
         return None
 
 
-def create_technical_insight_chart(df, output_file="./technical_insight_chart.png"):
+def create_technical_insight_chart(df, output_file="./technical_insight_chart3.png"):
     """Create enhanced technical analysis chart with support/resistance and signals."""
     if df is None or df.empty:
         print("No data available.")

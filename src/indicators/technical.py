@@ -1112,32 +1112,89 @@ class DatasetPreparation:
     def create_target_labels(
         df: pd.DataFrame,
         horizon: int = 1,
-        threshold: float = 0.0
+        threshold: float = 0.0,
+        volatility_window: int = 20,
+        min_risk_reward_ratio: float = 2.0
     ) -> pd.Series:
         """
-        Create classification labels based on future returns.
+        Create classification labels based on future returns with improved accuracy.
 
         Args:
             df: DataFrame with market data
             horizon: Number of periods to look ahead
-            threshold: Return threshold for buy/sell signals
+            threshold: Base return threshold for buy/sell signals
+            volatility_window: Window for calculating historical volatility
+            min_risk_reward_ratio: Minimum risk/reward ratio for valid signals
 
         Returns:
             Series with categorical labels (1: Buy, 0: Hold, -1: Sell)
         """
-        if df.empty or 'close' not in df.columns:
+        if df.empty or not all(col in df.columns for col in ['open', 'high', 'low', 'close']):
             logger.warning(
-                "Cannot create labels: Empty DataFrame or missing close prices")
+                "Cannot create labels: Empty DataFrame or missing required price columns")
             return pd.Series()
 
         try:
-            # Calculate future returns
-            future_returns = df['close'].shift(-horizon) / df['close'] - 1
-
-            # Create labels based on threshold
+            result_df = df.copy()
             labels = pd.Series(0, index=df.index)  # Default to hold
-            labels[future_returns > threshold] = 1  # Buy signal
-            labels[future_returns < -threshold] = -1  # Sell signal
+
+            # Calculate returns and volatility
+            future_returns = df['close'].shift(-horizon) / df['close'] - 1
+            historical_volatility = df['close'].pct_change().rolling(
+                volatility_window).std()
+
+            # Calculate adaptive threshold based on volatility
+            adaptive_threshold = threshold * (1 + historical_volatility)
+
+            # Calculate trend direction using SMA
+            short_sma = df['close'].rolling(window=10).mean()
+            long_sma = df['close'].rolling(window=30).mean()
+            trend = (short_sma > long_sma).astype(int)
+
+            # Calculate true range for risk assessment
+            true_range = pd.DataFrame({
+                'hl': df['high'] - df['low'],
+                'hc': abs(df['high'] - df['close'].shift(1)),
+                'lc': abs(df['low'] - df['close'].shift(1))
+            }).max(axis=1)
+
+            avg_true_range = true_range.rolling(window=14).mean()
+
+            # Risk-adjusted position sizing
+            risk_per_trade = avg_true_range / df['close']
+            potential_reward = future_returns.abs()
+            risk_reward_ratio = potential_reward / risk_per_trade
+
+            # Generate signals with improved criteria
+            for i in range(len(df) - horizon):
+                if pd.isna(risk_reward_ratio.iloc[i]) or pd.isna(future_returns.iloc[i]):
+                    continue
+
+                # Buy signals
+                if (future_returns.iloc[i] > adaptive_threshold.iloc[i] and  # Strong positive return expected
+                    # Good risk/reward ratio
+                    risk_reward_ratio.iloc[i] >= min_risk_reward_ratio and
+                    trend.iloc[i] == 1 and  # Upward trend
+                        df['close'].iloc[i] > short_sma.iloc[i]):  # Price above short-term MA
+                    labels.iloc[i] = 1
+
+                # Sell signals
+                elif (future_returns.iloc[i] < -adaptive_threshold.iloc[i] and  # Strong negative return expected
+                      # Good risk/reward ratio
+                      risk_reward_ratio.iloc[i] >= min_risk_reward_ratio and
+                      trend.iloc[i] == 0 and  # Downward trend
+                      df['close'].iloc[i] < short_sma.iloc[i]):  # Price below short-term MA
+                    labels.iloc[i] = -1
+
+            # Cleanup signals
+            labels = labels.fillna(0)
+
+            # Add confirmation: require consecutive signals
+            for i in range(1, len(labels)):
+                if labels.iloc[i] != labels.iloc[i-1]:  # Signal changed
+                    # Require two consecutive periods for confirmation
+                    if i < len(labels) - 1 and labels.iloc[i] != labels.iloc[i+1]:
+                        labels.iloc[i] = 0  # Remove isolated signals
 
             return labels
 

@@ -70,7 +70,7 @@ def fetch_and_process_data(symbol="MSFT", days=100):
     
     return df_with_patterns
 
-def create_technical_insight_chart(df, output_file="testing/control_point_3/technical_insight_chart.png"):
+def create_technical_insight_chart(df, output_file="./technical_insight_chart2.png"):
     """Create simplified technical chart with buy/sell signals."""
     if df is None or df.empty:
         return
