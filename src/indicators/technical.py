@@ -794,103 +794,170 @@ class SignalGeneration:
         result_df['buy_signal'] = 0
         result_df['sell_signal'] = 0
         result_df['signal_strength'] = 0
+        result_df['volume_significant'] = 0
 
         try:
-            # Volume significance
-            result_df['volume_significant'] = (
-                result_df['volume'] > result_df['volume'].rolling(
-                    window=20).mean() * volume_factor
-            ).astype(int)
+            # Volume significance (only if volume column exists)
+            if 'volume' in result_df.columns:
+                result_df['volume_significant'] = (
+                    result_df['volume'] > result_df['volume'].rolling(
+                        window=20).mean() * volume_factor
+                ).astype(int)
 
-            # Trend confirmation
-            trend_confirmed = (
-                (result_df['trend_strength'] > trend_strength_threshold) &
-                ((result_df['uptrend'] == 1) | (result_df['downtrend'] == 1))
-            )
+            # Trend confirmation (handle missing columns gracefully)
+            trend_confirmed = pd.Series(
+                True, index=result_df.index)  # Default to True
+            if 'trend_strength' in result_df.columns and ('uptrend' in result_df.columns or 'downtrend' in result_df.columns):
+                trend_confirmed = (
+                    (result_df['trend_strength'] > trend_strength_threshold) &
+                    (result_df.get('uptrend', 0).astype(bool) |
+                     result_df.get('downtrend', 0).astype(bool))
+                )
 
-            # Combined buy signals
-            buy_conditions = [
-                # RSI oversold
-                result_df['rsi'] < rsi_thresholds['oversold'],
-                # MACD bullish crossover
-                result_df['macd'] > result_df['macd_signal'],
-                # Price near support
-                result_df['at_support'] == 1,
-                # Bullish candlestick patterns
-                result_df['pattern_bullish_engulfing'] |
-                result_df['pattern_hammer'] |
-                result_df['pattern_morning_star'],
-                # Bollinger Band conditions
-                result_df['close'] < result_df['bb_lower'],
-                # Volume confirmation
-                result_df['volume_significant'] == 1,
-                # Ichimoku bullish
-                result_df['ichimoku_bullish'] == 1
-            ]
+            # Combined buy signals - handle potentially missing columns
+            buy_conditions = []
 
-            # Combined sell signals
-            sell_conditions = [
-                # RSI overbought
-                result_df['rsi'] > rsi_thresholds['overbought'],
-                # MACD bearish crossover
-                result_df['macd'] < result_df['macd_signal'],
-                # Price near resistance
-                result_df['at_resistance'] == 1,
-                # Bearish candlestick patterns
-                result_df['pattern_bearish_engulfing'] |
-                result_df['pattern_shooting_star'] |
-                result_df['pattern_evening_star'],
-                # Bollinger Band conditions
-                result_df['close'] > result_df['bb_upper'],
-                # Volume confirmation
-                result_df['volume_significant'] == 1,
-                # Ichimoku bearish
-                result_df['ichimoku_bearish'] == 1
-            ]
+            # RSI condition
+            if 'rsi' in result_df.columns:
+                buy_conditions.append(
+                    result_df['rsi'] < rsi_thresholds['oversold'])
 
-            # Calculate signal strength (number of conditions met)
-            buy_strength = sum(condition.astype(int)
-                               for condition in buy_conditions)
-            sell_strength = sum(condition.astype(int)
-                                for condition in sell_conditions)
+            # MACD condition
+            if all(col in result_df.columns for col in ['macd', 'macd_signal']):
+                buy_conditions.append(
+                    result_df['macd'] > result_df['macd_signal'])
 
-            # Generate final signals with strength threshold
-            min_conditions = 3  # Minimum number of conditions that must be met
-            result_df.loc[buy_strength >= min_conditions, 'buy_signal'] = 1
-            result_df.loc[sell_strength >= min_conditions, 'sell_signal'] = 1
+            # Support level condition
+            if 'at_support' in result_df.columns:
+                buy_conditions.append(result_df['at_support'] == 1)
 
-            # Calculate overall signal strength (-100 to 100)
-            result_df['signal_strength'] = (
-                (buy_strength - sell_strength) * 100 / len(buy_conditions)
-            ).clip(-100, 100)
+            # Pattern conditions - combine patterns safely
+            pattern_columns = [
+                col for col in result_df.columns if col.startswith('pattern_')]
+            bullish_patterns = pd.Series(False, index=result_df.index)
+            for col in pattern_columns:
+                if any(p in col for p in ['bullish', 'hammer', 'morning']):
+                    bullish_patterns = bullish_patterns | result_df[col].astype(
+                        bool)
+            if not bullish_patterns.empty:
+                buy_conditions.append(bullish_patterns)
 
-            # Add confidence metrics
-            result_df['signal_confidence'] = abs(
-                result_df['signal_strength']) / 100
-            result_df['trend_alignment'] = (
-                (result_df['buy_signal'] & result_df['uptrend']) |
-                (result_df['sell_signal'] & result_df['downtrend'])
-            ).astype(int)
+            # Bollinger Band condition
+            if all(col in result_df.columns for col in ['close', 'bb_lower']):
+                buy_conditions.append(
+                    result_df['close'] < result_df['bb_lower'])
 
-            # Filter signals by trend confirmation
-            result_df.loc[~trend_confirmed, ['buy_signal', 'sell_signal']] = 0
+            # Volume confirmation
+            if 'volume_significant' in result_df.columns:
+                buy_conditions.append(result_df['volume_significant'] == 1)
 
-            # Add trade risk metrics
-            result_df['risk_level'] = (
-                result_df['atr_percent'] *
-                # Higher confidence = lower risk
-                (2 - result_df['signal_confidence'])
-            ).clip(0, 100)
+            # Ichimoku condition
+            if 'ichimoku_bullish' in result_df.columns:
+                buy_conditions.append(result_df['ichimoku_bullish'] == 1)
 
-            # Potential profit targets based on ATR and signal strength
-            result_df['profit_target_percent'] = (
-                result_df['atr_percent'] *
-                (1 + result_df['signal_confidence']) *
-                2  # 2x ATR for initial target
-            )
+            # Combined sell signals - similar pattern for sell conditions
+            sell_conditions = []
 
-            # Stop loss levels based on ATR
-            result_df['stop_loss_percent'] = result_df['atr_percent']
+            # RSI condition
+            if 'rsi' in result_df.columns:
+                sell_conditions.append(
+                    result_df['rsi'] > rsi_thresholds['overbought'])
+
+            # MACD condition
+            if all(col in result_df.columns for col in ['macd', 'macd_signal']):
+                sell_conditions.append(
+                    result_df['macd'] < result_df['macd_signal'])
+
+            # Resistance level condition
+            if 'at_resistance' in result_df.columns:
+                sell_conditions.append(result_df['at_resistance'] == 1)
+
+            # Pattern conditions - combine patterns safely
+            bearish_patterns = pd.Series(False, index=result_df.index)
+            for col in pattern_columns:
+                if any(p in col for p in ['bearish', 'shooting', 'evening']):
+                    bearish_patterns = bearish_patterns | result_df[col].astype(
+                        bool)
+            if not bearish_patterns.empty:
+                sell_conditions.append(bearish_patterns)
+
+            # Bollinger Band condition
+            if all(col in result_df.columns for col in ['close', 'bb_upper']):
+                sell_conditions.append(
+                    result_df['close'] > result_df['bb_upper'])
+
+            # Volume confirmation
+            if 'volume_significant' in result_df.columns:
+                sell_conditions.append(result_df['volume_significant'] == 1)
+
+            # Ichimoku condition
+            if 'ichimoku_bearish' in result_df.columns:
+                sell_conditions.append(result_df['ichimoku_bearish'] == 1)
+
+            # Only process signals if we have conditions
+            if buy_conditions and sell_conditions:
+                # Calculate signal strength (number of conditions met)
+                buy_strength = sum(condition.astype(int)
+                                   for condition in buy_conditions)
+                sell_strength = sum(condition.astype(int)
+                                    for condition in sell_conditions)
+
+                # Generate final signals with strength threshold and ensure mutual exclusivity
+                # Adjust threshold based on available conditions
+                min_conditions = min(3, len(buy_conditions))
+
+                # Only set buy signal if buy_strength is greater than sell_strength
+                mask_buy = (buy_strength >= min_conditions) & (
+                    buy_strength > sell_strength)
+                result_df.loc[mask_buy, 'buy_signal'] = 1
+
+                # Only set sell signal if sell_strength is greater than buy_strength
+                mask_sell = (sell_strength >= min_conditions) & (
+                    sell_strength > buy_strength)
+                result_df.loc[mask_sell, 'sell_signal'] = 1
+
+                # Calculate overall signal strength (-100 to 100)
+                max_conditions = max(len(buy_conditions), len(sell_conditions))
+                if max_conditions > 0:
+                    result_df['signal_strength'] = (
+                        (buy_strength - sell_strength) * 100 / max_conditions
+                    ).clip(-100, 100)
+
+                # Add confidence metrics
+                result_df['signal_confidence'] = abs(
+                    result_df['signal_strength']) / 100
+
+                # Calculate trend alignment if trend columns exist
+                if 'uptrend' in result_df.columns and 'downtrend' in result_df.columns:
+                    result_df['trend_alignment'] = (
+                        ((result_df['buy_signal'] == 1) & result_df['uptrend'].astype(bool)) |
+                        ((result_df['sell_signal'] == 1) &
+                         result_df['downtrend'].astype(bool))
+                    ).astype(int)
+                else:
+                    result_df['trend_alignment'] = 0
+
+                # Filter signals by trend confirmation if it exists
+                if not trend_confirmed.empty:
+                    result_df.loc[~trend_confirmed, [
+                        'buy_signal', 'sell_signal']] = 0
+
+                # Add trade risk metrics if ATR exists
+                if 'atr_percent' in result_df.columns:
+                    result_df['risk_level'] = (
+                        result_df['atr_percent'] *
+                        (2 - result_df['signal_confidence'])
+                    ).clip(0, 100)
+
+                    # Potential profit targets based on ATR and signal strength
+                    result_df['profit_target_percent'] = (
+                        result_df['atr_percent'] *
+                        (1 + result_df['signal_confidence']) *
+                        2  # 2x ATR for initial target
+                    )
+
+                    # Stop loss levels based on ATR
+                    result_df['stop_loss_percent'] = result_df['atr_percent']
 
         except Exception as e:
             logger.error(f"Error generating signals: {e}")
@@ -1116,11 +1183,12 @@ class DatasetPreparation:
         volatility_window: int = 20,
         min_risk_reward_ratio: float = 1.5,  # Slightly lowered for more signals
         volume_filter: bool = True,  # New parameter to filter by volume
-        confirm_with_indicators: bool = True  # New parameter to confirm with technical indicators
+        # New parameter to confirm with technical indicators
+        confirm_with_indicators: bool = True
     ) -> pd.DataFrame:
         """
         Create enhanced classification labels with multiple factors for improved accuracy.
-        
+
         Args:
             df: DataFrame with market data and technical indicators
             horizon: Number of periods to look ahead
@@ -1129,177 +1197,193 @@ class DatasetPreparation:
             min_risk_reward_ratio: Minimum risk/reward ratio for valid signals
             volume_filter: Whether to use volume as a filter
             confirm_with_indicators: Whether to confirm signals with technical indicators
-            
+
         Returns:
             DataFrame with enhanced target labels and supporting data
         """
         if df.empty or not all(col in df.columns for col in ['open', 'high', 'low', 'close']):
-            logger.warning("Cannot create advanced labels: Empty DataFrame or missing required price columns")
+            logger.warning(
+                "Cannot create advanced labels: Empty DataFrame or missing required price columns")
             return pd.DataFrame()
-            
+
         try:
             # Create a copy to avoid modifying the original
             result_df = df.copy()
-            
+
             # Initialize result columns
             result_df['target_label'] = 0  # Default to hold (0)
             result_df['signal_probability'] = 0.0
             result_df['expected_return'] = 0.0
             result_df['risk_reward_ratio'] = 0.0
-            
+
             # Calculate future returns for different horizons
             for h in range(1, horizon + 1):
-                result_df[f'future_return_{h}d'] = result_df['close'].shift(-h) / result_df['close'] - 1
-            
+                result_df[f'future_return_{h}d'] = result_df['close'].shift(
+                    -h) / result_df['close'] - 1
+
             # Calculate weighted future returns (closer days have higher weight)
             weights = np.linspace(1.0, 0.5, horizon)
-            weighted_returns = pd.DataFrame([result_df[f'future_return_{h+1}d'] * weights[h] 
+            weighted_returns = pd.DataFrame([result_df[f'future_return_{h+1}d'] * weights[h]
                                             for h in range(horizon)]).mean()
             result_df['weighted_future_return'] = weighted_returns
-            
+
             # Calculate historical volatility
-            historical_volatility = result_df['close'].pct_change().rolling(volatility_window).std()
-            
+            historical_volatility = result_df['close'].pct_change().rolling(
+                volatility_window).std()
+
             # Calculate adaptive threshold based on volatility (higher volatility = higher threshold)
             adaptive_threshold = threshold * (1 + 2 * historical_volatility)
-            
+
             # Calculate true range for risk assessment
             true_range = pd.DataFrame({
                 'hl': result_df['high'] - result_df['low'],
                 'hc': abs(result_df['high'] - result_df['close'].shift(1)),
                 'lc': abs(result_df['low'] - result_df['close'].shift(1))
             }).max(axis=1)
-            
+
             avg_true_range = true_range.rolling(window=14).mean()
-            
+
             # Risk-adjusted position sizing
             risk_per_trade = avg_true_range / result_df['close']
             potential_reward = result_df['weighted_future_return'].abs()
             result_df['risk_reward_ratio'] = potential_reward / risk_per_trade
-            
+
             # Get some technical indicator values for confirmation
-            rsi_oversold = result_df['rsi'] < 30 if 'rsi' in result_df.columns else pd.Series(False, index=result_df.index)
-            rsi_overbought = result_df['rsi'] > 70 if 'rsi' in result_df.columns else pd.Series(False, index=result_df.index)
-            
-            macd_bullish = (result_df['macd'] > result_df['macd_signal']) if all(col in result_df.columns for col in ['macd', 'macd_signal']) else pd.Series(False, index=result_df.index)
-            macd_bearish = (result_df['macd'] < result_df['macd_signal']) if all(col in result_df.columns for col in ['macd', 'macd_signal']) else pd.Series(False, index=result_df.index)
-            
-            bb_oversold = (result_df['close'] < result_df['bb_lower']) if 'bb_lower' in result_df.columns else pd.Series(False, index=result_df.index)
-            bb_overbought = (result_df['close'] > result_df['bb_upper']) if 'bb_upper' in result_df.columns else pd.Series(False, index=result_df.index)
-            
+            rsi_oversold = result_df['rsi'] < 30 if 'rsi' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+            rsi_overbought = result_df['rsi'] > 70 if 'rsi' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+
+            macd_bullish = (result_df['macd'] > result_df['macd_signal']) if all(
+                col in result_df.columns for col in ['macd', 'macd_signal']) else pd.Series(False, index=result_df.index)
+            macd_bearish = (result_df['macd'] < result_df['macd_signal']) if all(
+                col in result_df.columns for col in ['macd', 'macd_signal']) else pd.Series(False, index=result_df.index)
+
+            bb_oversold = (result_df['close'] < result_df['bb_lower']) if 'bb_lower' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+            bb_overbought = (result_df['close'] > result_df['bb_upper']) if 'bb_upper' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+
             # Volume filter
             volume_spike = pd.Series(False, index=result_df.index)
             if 'volume' in result_df.columns and volume_filter:
-                volume_spike = result_df['volume'] > result_df['volume'].rolling(window=20).mean() * 1.5
-            
+                volume_spike = result_df['volume'] > result_df['volume'].rolling(
+                    window=20).mean() * 1.5
+
             # Trend determination
-            uptrend = result_df['uptrend'] == 1 if 'uptrend' in result_df.columns else pd.Series(False, index=result_df.index)
-            downtrend = result_df['downtrend'] == 1 if 'downtrend' in result_df.columns else pd.Series(False, index=result_df.index)
-            
+            uptrend = result_df['uptrend'] == 1 if 'uptrend' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+            downtrend = result_df['downtrend'] == 1 if 'downtrend' in result_df.columns else pd.Series(
+                False, index=result_df.index)
+
             # Pattern signals
             bullish_pattern = pd.Series(False, index=result_df.index)
             bearish_pattern = pd.Series(False, index=result_df.index)
-            
+
             for col in result_df.columns:
                 if col.startswith('pattern_'):
                     if any(p in col for p in ['bullish', 'hammer', 'morning', 'doji']):
-                        bullish_pattern = bullish_pattern | (result_df[col] == 1)
+                        bullish_pattern = bullish_pattern | (
+                            result_df[col] == 1)
                     elif any(p in col for p in ['bearish', 'shooting', 'evening']):
-                        bearish_pattern = bearish_pattern | (result_df[col] == 1)
-            
+                        bearish_pattern = bearish_pattern | (
+                            result_df[col] == 1)
+
             # Generate buy signals with enhanced criteria
             for i in range(len(result_df) - horizon):
                 if pd.isna(result_df['risk_reward_ratio'].iloc[i]) or pd.isna(result_df['weighted_future_return'].iloc[i]):
                     continue
-                
+
                 # Calculate buy signal probability based on multiple factors
                 buy_probability = 0.0
-                
+
                 # Future return expectation (base factor)
                 if result_df['weighted_future_return'].iloc[i] > adaptive_threshold.iloc[i]:
                     buy_probability += 0.3
-                
+
                 # Risk/reward ratio
                 if result_df['risk_reward_ratio'].iloc[i] >= min_risk_reward_ratio:
                     buy_probability += 0.2
-                
+
                 # Technical indicator confirmation
                 if confirm_with_indicators:
                     # RSI confirmation
                     if rsi_oversold.iloc[i]:
                         buy_probability += 0.1
-                    
+
                     # MACD confirmation
                     if macd_bullish.iloc[i]:
                         buy_probability += 0.1
-                    
+
                     # Bollinger Band confirmation
                     if bb_oversold.iloc[i]:
                         buy_probability += 0.1
-                    
+
                     # Volume confirmation
                     if volume_spike.iloc[i]:
                         buy_probability += 0.1
-                    
+
                     # Trend confirmation
                     if uptrend.iloc[i]:
                         buy_probability += 0.1
-                    
+
                     # Pattern confirmation
                     if bullish_pattern.iloc[i]:
                         buy_probability += 0.2
-                
+
                 # Calculate sell signal probability based on multiple factors
                 sell_probability = 0.0
-                
+
                 # Future return expectation (base factor)
                 if result_df['weighted_future_return'].iloc[i] < -adaptive_threshold.iloc[i]:
                     sell_probability += 0.3
-                
+
                 # Risk/reward ratio
                 if result_df['risk_reward_ratio'].iloc[i] >= min_risk_reward_ratio:
                     sell_probability += 0.2
-                
+
                 # Technical indicator confirmation
                 if confirm_with_indicators:
                     # RSI confirmation
                     if rsi_overbought.iloc[i]:
                         sell_probability += 0.1
-                    
+
                     # MACD confirmation
                     if macd_bearish.iloc[i]:
                         sell_probability += 0.1
-                    
+
                     # Bollinger Band confirmation
                     if bb_overbought.iloc[i]:
                         sell_probability += 0.1
-                    
+
                     # Volume confirmation
                     if volume_spike.iloc[i]:
                         sell_probability += 0.1
-                    
+
                     # Trend confirmation
                     if downtrend.iloc[i]:
                         sell_probability += 0.1
-                    
+
                     # Pattern confirmation
                     if bearish_pattern.iloc[i]:
                         sell_probability += 0.2
-                
+
                 # Determine final signal based on highest probability
                 max_prob = max(buy_probability, sell_probability)
-                result_df.loc[result_df.index[i], 'signal_probability'] = max_prob
-                
+                result_df.loc[result_df.index[i],
+                              'signal_probability'] = max_prob
+
                 # Strong buy signal (probability >= 0.6)
                 if buy_probability >= 0.6 and buy_probability > sell_probability:
                     result_df.loc[result_df.index[i], 'target_label'] = 1
                 # Strong sell signal (probability >= 0.6)
                 elif sell_probability >= 0.6 and sell_probability > buy_probability:
                     result_df.loc[result_df.index[i], 'target_label'] = -1
-                
+
                 # Store expected return
-                result_df.loc[result_df.index[i], 'expected_return'] = result_df['weighted_future_return'].iloc[i]
-            
+                result_df.loc[result_df.index[i],
+                              'expected_return'] = result_df['weighted_future_return'].iloc[i]
+
             # Remove consecutive duplicate signals to reduce noise
             prev_signal = 0
             for i in range(len(result_df)):
@@ -1308,11 +1392,11 @@ class DatasetPreparation:
                     # Keep only the first signal in a series of identical signals
                     result_df.loc[result_df.index[i], 'target_label'] = 0
                 prev_signal = current_signal
-            
-            return result_df[['target_label', 'signal_probability', 'expected_return', 'risk_reward_ratio'] + 
-                            [f'future_return_{h}d' for h in range(1, horizon + 1)] + 
-                            ['weighted_future_return']]
-            
+
+            return result_df[['target_label', 'signal_probability', 'expected_return', 'risk_reward_ratio'] +
+                             [f'future_return_{h}d' for h in range(1, horizon + 1)] +
+                             ['weighted_future_return']]
+
         except Exception as e:
             logger.error(f"Error creating advanced labels: {e}")
             return pd.DataFrame()
