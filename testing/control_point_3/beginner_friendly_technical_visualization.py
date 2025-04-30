@@ -1,6 +1,6 @@
 """
-Beginner-Friendly Visualization for MakesALot Trading Bot.
-Creates simple buy/sell signal visualization.
+Enhanced Beginner-Friendly Visualization for MakesALot Trading Bot.
+Creates technical analysis visualization with reliable signals using DatasetPreparation.
 """
 
 import os
@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from src.data.fetcher import get_data_api
 from src.data.preprocessor import DataPreprocessor
-from src.indicators.technical import TechnicalIndicators, PatternRecognition
+from src.indicators.technical import TechnicalIndicators, PatternRecognition, DatasetPreparation
 
 def fetch_and_process_data(symbol="MSFT", days=100):
     """Fetch and process market data with technical indicators."""
@@ -40,95 +40,28 @@ def fetch_and_process_data(symbol="MSFT", days=100):
         df = TechnicalIndicators.add_all_indicators(df)
         df = PatternRecognition.recognize_candlestick_patterns(df)
         df = PatternRecognition.detect_support_resistance(df)
-
+        df = PatternRecognition.detect_trend(df)
+        
+        # Generate trading signals using improved method
+        signals_df = DatasetPreparation.create_target_labels(
+            df, 
+            horizon=5, 
+            threshold=0.01,
+            min_risk_reward_ratio=1.5
+        )
+        
+        # Merge signals back into main dataframe
+        for col in signals_df.columns:
+            df[col] = signals_df[col]
+            
         return df
     except Exception as e:
         print(f"Error fetching data: {e}")
         return None
 
 
-def validate_trading_signal(df, index, pattern_name):
-    """Validate trading signals using multiple technical indicators."""
-    try:
-        # Get current and previous data points
-        loc = df.index.get_loc(index)
-        prev_idx = max(0, loc - 3)
-
-        # Get all required indicators
-        price = df.loc[index, 'close']
-        prev_price = df.iloc[prev_idx]['close']
-        rsi = df.loc[index, 'rsi'] if 'rsi' in df.columns else None
-        macd = df.loc[index, 'macd'] if 'macd' in df.columns else None
-        macd_signal = df.loc[index,
-                             'macd_signal'] if 'macd_signal' in df.columns else None
-        volume = df.loc[index, 'volume'] if 'volume' in df.columns else None
-        avg_volume = df['volume'].rolling(window=20).mean(
-        ).loc[index] if 'volume' in df.columns else None
-
-        # Calculate trend
-        price_change = ((price - prev_price) / prev_price) * 100
-
-        signal_strength = 0
-        conditions_met = []
-
-        # Buy conditions
-        if any(x in pattern_name.lower() for x in ['bullish', 'hammer', 'doji']):
-            # RSI oversold condition
-            if rsi and rsi < 40:
-                signal_strength += 2
-                conditions_met.append("RSI")
-
-            # MACD crossover
-            if macd and macd_signal and macd > macd_signal:
-                signal_strength += 2
-                conditions_met.append("MACD")
-
-            # Volume confirmation
-            if volume and avg_volume and volume > avg_volume * 1.5:
-                signal_strength += 1
-                conditions_met.append("VOL")
-
-            # Downtrend reversal
-            if price_change < -2:
-                signal_strength += 1
-                conditions_met.append("TREND")
-
-            if signal_strength >= 3:
-                return True, "BUY", conditions_met
-
-        # Sell conditions
-        elif any(x in pattern_name.lower() for x in ['bearish', 'shooting']):
-            # RSI overbought condition
-            if rsi and rsi > 60:
-                signal_strength += 2
-                conditions_met.append("RSI")
-
-            # MACD crossover
-            if macd and macd_signal and macd < macd_signal:
-                signal_strength += 2
-                conditions_met.append("MACD")
-
-            # Volume confirmation
-            if volume and avg_volume and volume > avg_volume * 1.5:
-                signal_strength += 1
-                conditions_met.append("VOL")
-
-            # Uptrend reversal
-            if price_change > 2:
-                signal_strength += 1
-                conditions_met.append("TREND")
-
-            if signal_strength >= 3:
-                return True, "SELL", conditions_met
-
-        return False, "", []
-    except Exception as e:
-        print(f"Error validating signal: {e}")
-        return False, "", []
-
-
-def create_technical_insight_chart(df, output_file="./technical_insight_chart.png"):
-    """Create enhanced technical analysis chart with support/resistance and signals."""
+def create_technical_insight_chart(df, output_file="testing/control_point_3/enhanced_technical_insight_chart1.png"):
+    """Create enhanced technical analysis chart with support/resistance and reliable signals."""
     if df is None or df.empty:
         print("No data available.")
         return
@@ -145,11 +78,11 @@ def create_technical_insight_chart(df, output_file="./technical_insight_chart.pn
         ax1.plot(df.index, df['close'], label='Price',
                  color='blue', linewidth=2)
         if 'sma_20' in df.columns:
-            ax1.plot(df.index, df['sma_20'], label='20MA',
+            ax1.plot(df.index, df['sma_20'], label='20-day MA',
                      color='orange', linewidth=1)
         if 'sma_50' in df.columns:
             ax1.plot(df.index, df['sma_50'],
-                     label='50MA', color='red', linewidth=1)
+                     label='50-day MA', color='red', linewidth=1)
 
         # Plot support and resistance levels with zones
         if 'support_level' in df.columns:
@@ -158,7 +91,7 @@ def create_technical_insight_chart(df, output_file="./technical_insight_chart.pn
                 ax1.axhline(y=level, color='green', linestyle='--', alpha=0.5)
                 ax1.fill_between(df.index, level-level*0.005, level+level*0.005,
                                  color='green', alpha=0.1)
-                ax1.text(df.index[-1], level, f'S: {level:.2f}', color='green',
+                ax1.text(df.index[-1], level, f'Support: {level:.2f}', color='green',
                          va='bottom', ha='right')
 
         if 'resistance_level' in df.columns:
@@ -167,37 +100,60 @@ def create_technical_insight_chart(df, output_file="./technical_insight_chart.pn
                 ax1.axhline(y=level, color='red', linestyle='--', alpha=0.5)
                 ax1.fill_between(df.index, level-level*0.005, level+level*0.005,
                                  color='red', alpha=0.1)
-                ax1.text(df.index[-1], level, f'R: {level:.2f}', color='red',
+                ax1.text(df.index[-1], level, f'Resistance: {level:.2f}', color='red',
                          va='top', ha='right')
 
-        # Plot signals with improved annotations
-        pattern_cols = [
-            col for col in df.columns if col.startswith('pattern_')]
-        for col in pattern_cols:
-            pattern_dates = df.index[df[col] == 1]
-
-            for d in pattern_dates:
-                is_valid, signal, conditions = validate_trading_signal(
-                    df, d, col)
-
-                if is_valid:
-                    price = df.loc[d, 'close']
-                    color = 'green' if signal == "BUY" else 'red'
-                    marker = '^' if signal == "BUY" else 'v'
-
-                    # Plot signal marker with conditions
-                    ax1.scatter(d, price, color=color,
-                                marker=marker, s=150, zorder=5)
-                    ax1.annotate(f'{signal}\n{"+".join(conditions)}',
-                                 xy=(d, price),
-                                 xytext=(0, 15 if signal == "BUY" else -15),
-                                 textcoords='offset points',
-                                 ha='center',
-                                 va='center',
-                                 color=color,
-                                 fontweight='bold',
-                                 fontsize=9,
-                                 bbox=dict(facecolor='white', edgecolor=color, alpha=0.7, pad=0.5))
+        # Plot signals based on target_label
+        if 'target_label' in df.columns:
+            # Buy signals
+            buy_indices = df[df['target_label'] == 1].index
+            if not buy_indices.empty:
+                buy_prices = df.loc[buy_indices, 'close']
+                ax1.scatter(buy_indices, buy_prices, marker='^', color='green', 
+                            s=150, label='Buy Signal', zorder=5)
+                
+                # Add probability annotations for each buy signal
+                if 'signal_probability' in df.columns:
+                    for idx in buy_indices:
+                        prob = df.loc[idx, 'signal_probability']
+                        exp_return = df.loc[idx, 'expected_return'] * 100 if 'expected_return' in df.columns else 0
+                        
+                        annotation = f"BUY\nConf: {prob:.2f}\nExp: {exp_return:.1f}%"
+                        ax1.annotate(annotation,
+                                    xy=(idx, df.loc[idx, 'close']),
+                                    xytext=(0, 20),
+                                    textcoords='offset points',
+                                    ha='center',
+                                    va='bottom',
+                                    color='darkgreen',
+                                    fontweight='bold',
+                                    fontsize=9,
+                                    bbox=dict(facecolor='white', edgecolor='green', alpha=0.7, pad=0.5))
+            
+            # Sell signals
+            sell_indices = df[df['target_label'] == -1].index
+            if not sell_indices.empty:
+                sell_prices = df.loc[sell_indices, 'close']
+                ax1.scatter(sell_indices, sell_prices, marker='v', color='red', 
+                            s=150, label='Sell Signal', zorder=5)
+                
+                # Add probability annotations for each sell signal
+                if 'signal_probability' in df.columns:
+                    for idx in sell_indices:
+                        prob = df.loc[idx, 'signal_probability']
+                        exp_return = df.loc[idx, 'expected_return'] * 100 if 'expected_return' in df.columns else 0
+                        
+                        annotation = f"SELL\nConf: {prob:.2f}\nExp: {exp_return:.1f}%"
+                        ax1.annotate(annotation,
+                                    xy=(idx, df.loc[idx, 'close']),
+                                    xytext=(0, -20),
+                                    textcoords='offset points',
+                                    ha='center',
+                                    va='top',
+                                    color='darkred',
+                                    fontweight='bold',
+                                    fontsize=9,
+                                    bbox=dict(facecolor='white', edgecolor='red', alpha=0.7, pad=0.5))
 
         # Plot volume in lower subplot
         if 'volume' in df.columns:
@@ -210,13 +166,28 @@ def create_technical_insight_chart(df, output_file="./technical_insight_chart.pn
             volume_ma = df['volume'].rolling(window=20).mean()
             ax2.plot(df.index, volume_ma, color='blue', linewidth=1, alpha=0.8,
                      label='Volume MA(20)')
-            ax2.legend(loc='upper right')
+            ax2.legend(loc='upper left')
+
+        # Add explanatory text box
+        explanation = """
+TRADING SIGNALS EXPLANATION:
+• Green triangles ▲: Buy signals with high confidence
+• Red triangles ▼: Sell signals with high confidence
+• Conf: Signal confidence level (0-1)
+• Exp: Expected return percentage
+• Signal calculation uses multiple factors including technical
+  indicators, price patterns, and risk/reward analysis
+        """
+        
+        props = dict(boxstyle='round', facecolor='white', alpha=0.8)
+        ax1.text(0.02, 0.02, explanation, transform=ax1.transAxes, fontsize=9,
+                verticalalignment='bottom', horizontalalignment='left', bbox=props)
 
         # Enhance chart formatting
-        ax1.set_title(f"Trading Signals ({df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')})",
+        ax1.set_title(f"Advanced Trading Signals ({df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')})",
                       fontsize=14, pad=20)
         ax1.set_ylabel("Price ($)", fontsize=12)
-        ax1.legend(loc='upper left', bbox_to_anchor=(1.05, 1))
+        ax1.legend(loc='upper left')
         ax1.grid(True, alpha=0.3)
 
         # Adjust layout and save
@@ -228,6 +199,8 @@ def create_technical_insight_chart(df, output_file="./technical_insight_chart.pn
 
     except Exception as e:
         print(f"Error creating chart: {e}")
+        import traceback
+        traceback.print_exc()
         plt.close()
 
 
@@ -236,5 +209,5 @@ if __name__ == "__main__":
     df = fetch_and_process_data(symbol="MSFT", days=100)
 
     if df is not None:
-        print("Creating technical analysis visualization...")
+        print("Creating enhanced technical analysis visualization...")
         create_technical_insight_chart(df)
