@@ -140,7 +140,7 @@ def evaluate_signal_quality(actual_returns, signals, name="Signal Evaluation"):
     except Exception as e:
         print(f"Error evaluating signals: {e}")
         return {}
-
+    
 
 def create_trading_simulation(df):
     """
