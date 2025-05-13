@@ -18,24 +18,43 @@ A sophisticated algorithmic trading system implemented as a Chrome extension tha
 day-trading-bot/
 ├── src/                    # Main source code directory
 │   ├── data/               # Data handling components
+│   │   ├── __init__.py
 │   │   ├── fetcher.py      # Code for fetching market data from APIs
-│   │   └── preprocessor.py # Data cleaning and preparation functions
+│   │   ├── preprocessor.py # Data cleaning and preparation functions
+│   │   └── storage.py      # MongoDB storage implementation
 │   ├── indicators/         # Technical analysis indicators
-│   │   └── technical.py    # Implementation of technical indicators (RSI, MACD, etc.)
+│   │   ├── __init__.py
+│   │   └── technical.py    # Implementation of technical indicators, patterns, signals
 │   ├── models/             # Machine learning models
+│   │   ├── __init__.py
 │   │   └── ml.py           # ML model definitions and training code
 │   └── utils/              # Utility functions
+│       ├── __init__.py
 │       └── helpers.py      # Helper functions used across the project
-├── tests/                  # Unit and integration tests
-├── notebooks/              # Jupyter notebooks for exploration and prototyping
+├── tests/                  # Unit tests directory
+│   ├── __init__.py
+│   ├── test_data.py
+│   └── test_indicators.py
+├── notebooks/              # Jupyter notebooks for exploration
+│   └── prototyping.ipynb
 ├── config/                 # Configuration files
-└── chrome-extension/       # Frontend Chrome extension code (to be added in Phase 3)
-└── testing/                # Main source code directory
-│   ├── control_point_1/                         # Cointains tests for CP1
-│   │   ├── enhanced_test_implementation.py      
-│   │   └── test_implementation.py.py 
-│   └── control_point_2/                         # Cointains tests for CP2
-│       └── test_data_pipeline.py               
+│   └── settings.py
+├── testing/                # Testing and visualization scripts
+│   ├── control_point_1/    # Contains tests for CP1
+│   │   ├── enhanced_test_implementation.py
+│   │   └── test_implementation.py
+│   ├── control_point_2/    # Contains tests for CP2
+│   │   ├── test_data_pipeline.py
+│   │   ├── visualize_pipeline.py
+│   │   └── easier_explain_visualization.py
+│   └── control_point_3/    # Contains tests for CP3
+│       ├── test_dataset_preparation.py
+│       └── beginner_friendly_technical_visualization3.py
+├── .env                    # Environment variables and API keys
+├── .gitignore              # Git ignore file
+├── README.md               # Project documentation
+├── requirements.txt        # Project dependencies
+└── setup.py                # Package installation script           
 ```
 
 ## Development Timeline

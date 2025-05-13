@@ -1,0 +1,12 @@
+TRAINING SUMMARY FOR MSFT
+Date: 2025-05-13 18:21:51
+
+Data points: 341
+Training period: 2024-01-02 00:00:00 to 2025-05-12 00:00:00
+
+MODEL PERFORMANCE METRICS:
+  model         mse       rmse       mae        r2          mape  direction_accuracy
+0  LSTM  111.282845  10.549068  8.977032 -0.834795  3.642667e+17                 NaN
+1   GRU   60.053940   7.749448  5.608068  0.009851  9.985347e+16                 NaN
+
+Could not determine best model.
