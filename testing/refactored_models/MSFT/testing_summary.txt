@@ -1,34 +1,34 @@
 REFACTORED ML MODULE TESTING SUMMARY
-Date: 2025-05-14 18:58:37
+Date: 2025-05-26 15:57:53
 
 Tested with MSFT data
-Data points: 342
-Period: 2024-01-02 00:00:00 to 2025-05-13 00:00:00
+Data points: 341
+Period: 2024-01-16 00:00:00 to 2025-05-23 00:00:00
 
 MODEL RESULTS:
 
 LSTM:
-  mse: 2396.9661
-  rmse: 48.9588
-  mae: 43.8738
-  r2: -3.6913
-  mape: 11.3051
-  direction_accuracy: 48.8372
+  mse: 3123.4204
+  rmse: 55.8876
+  mae: 50.4119
+  r2: -2.2461
+  mape: 12.3280
+  direction_accuracy: 59.5238
 
 GRU:
-  mse: 31358.6649
-  rmse: 177.0838
-  mae: 159.0643
+  mse: 13815.6695
+  rmse: 117.5401
+  mae: 104.6908
   r2: -10.0000
-  mape: 40.1523
-  direction_accuracy: 55.8140
+  mape: 25.3978
+  direction_accuracy: 59.5238
 
 CNN:
-  mse: 1374.1465
-  rmse: 37.0695
-  mae: 31.8408
-  r2: -1.6894
-  mape: 8.3321
-  direction_accuracy: 51.1628
+  mse: 782.3483
+  rmse: 27.9705
+  mae: 22.6853
+  r2: 0.1869
+  mape: 5.3980
+  direction_accuracy: 50.0000
 
-Best model: GRU
+Best model: LSTM

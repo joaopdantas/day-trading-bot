@@ -1,0 +1,18 @@
+HYPERPARAMETER OPTIMIZATION SUMMARY
+Date: 2025-05-26 16:37:08
+
+Dataset: MSFT with 341 data points
+Period: 2024-01-16 00:00:00 to 2025-05-23 00:00:00
+
+CNN OPTIMIZATION:
+  Best validation loss: 0.0606
+  Best direction accuracy: 0.00%
+  Best parameters: {'filters': [32, 16], 'kernel_sizes': [7, 5], 'pool_sizes': [2, 2, 1], 'dropout_rate': 0.4, 'learning_rate': 0.0001, 'batch_size': 32}
+  Successful trials: 30/30
+
+LSTM OPTIMIZATION:
+  Best validation loss: inf
+  Best direction accuracy: 68.09%
+  Best parameters: {'units': [64, 32], 'dropout_rate': 0.4, 'learning_rate': 0.001, 'batch_size': 16, 'bidirectional': True}
+  Successful trials: 25/25
+
