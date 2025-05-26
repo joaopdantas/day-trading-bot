@@ -196,6 +196,11 @@ class ModelTrainer:
             y_test_orig = y_test_override
             logger.info("Using provided override values for evaluation")
         else:
+            # DEBUGGING: Let's see what's happening with the scaling
+            logger.info("="*50)
+            logger.info("DEBUGGING EVALUATION METRICS")
+            logger.info("="*50)
+            
             # Standard inverse transform if scaler provided
             if scaler is not None:
                 # Reshape for inverse_transform
@@ -205,23 +210,52 @@ class ModelTrainer:
                 else:
                     y_test_reshaped = y_test
                     y_pred_reshaped = y_pred
-                    
+                
+                # CRITICAL DEBUG: Log the ranges BEFORE transform
+                logger.info(f"BEFORE inverse transform:")
+                logger.info(f"  y_test range: {y_test_reshaped.min():.4f} to {y_test_reshaped.max():.4f}")
+                logger.info(f"  y_pred range: {y_pred_reshaped.min():.4f} to {y_pred_reshaped.max():.4f}")
+                
                 # Try to inverse_transform
                 try:
                     y_test_orig = scaler.inverse_transform(y_test_reshaped)
                     y_pred_orig = scaler.inverse_transform(y_pred_reshaped)
                     
-                    # Flatten if needed
-                    if len(y_test.shape) == 1:
-                        y_test_orig = y_test_orig.flatten()
-                        y_pred_orig = y_pred_orig.flatten()
+                    # CRITICAL DEBUG: Log the ranges AFTER transform
+                    logger.info(f"AFTER inverse transform:")
+                    logger.info(f"  y_test range: ${y_test_orig.min():.2f} to ${y_test_orig.max():.2f}")
+                    logger.info(f"  y_pred range: ${y_pred_orig.min():.2f} to ${y_pred_orig.max():.2f}")
+                    
+                    # Check if inverse transform actually worked
+                    if abs(y_test_orig.max()) < 10 or abs(y_pred_orig.max()) < 10:
+                        logger.error("❌ INVERSE TRANSFORM FAILED - VALUES STILL SCALED!")
+                        logger.error("Using scaled values - this will give wrong RMSE/MAE/MAPE")
+                        # Don't use the inverse transform result
+                        y_test_orig = y_test_reshaped.flatten()
+                        y_pred_orig = y_pred_reshaped.flatten()
+                    else:
+                        logger.info("✅ Inverse transform worked - using real prices")
+                        # Flatten if needed
+                        if len(y_test.shape) == 1:
+                            y_test_orig = y_test_orig.flatten()
+                            y_pred_orig = y_pred_orig.flatten()
+                        
                 except Exception as e:
-                    logger.warning(f"Could not inverse transform with scaler: {e}")
+                    logger.error(f"❌ Inverse transform failed: {e}")
                     y_test_orig = y_test
                     y_pred_orig = y_pred
+                    logger.error("Using scaled values - this will give wrong RMSE/MAE/MAPE")
             else:
+                logger.info("No scaler provided - using raw values")
                 y_test_orig = y_test
                 y_pred_orig = y_pred
+
+            logger.info(f"FINAL VALUES FOR METRICS:")
+            logger.info(f"  y_test_orig range: {y_test_orig.min():.4f} to {y_test_orig.max():.4f}")
+            logger.info(f"  y_pred_orig range: {y_pred_orig.min():.4f} to {y_pred_orig.max():.4f}")
+            logger.info("="*50)
+        
+        
 
         # Check for NaN or inf values
         if np.isnan(y_test_orig).any() or np.isinf(y_test_orig).any():

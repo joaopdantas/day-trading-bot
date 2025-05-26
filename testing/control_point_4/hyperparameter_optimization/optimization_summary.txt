@@ -1,18 +1,41 @@
-HYPERPARAMETER OPTIMIZATION SUMMARY
-Date: 2025-05-26 16:37:08
+HYPERPARAMETER OPTIMIZATION SUMMARY - FIXED EVALUATION
+Date: 2025-05-26 18:50:36
 
 Dataset: MSFT with 341 data points
 Period: 2024-01-16 00:00:00 to 2025-05-23 00:00:00
 
+EVALUATION FIX APPLIED:
+- Models now evaluated using original test prices
+- RMSE should be in realistic $10-50 range
+- MAPE should be reasonable <20%
+- Direction accuracy optimized for trading
+
 CNN OPTIMIZATION:
-  Best validation loss: 0.0606
+  Best validation loss: 0.0637
   Best direction accuracy: 0.00%
-  Best parameters: {'filters': [32, 16], 'kernel_sizes': [7, 5], 'pool_sizes': [2, 2, 1], 'dropout_rate': 0.4, 'learning_rate': 0.0001, 'batch_size': 32}
+  Best parameters: {'filters': [32, 16, 8], 'kernel_sizes': [7, 5], 'pool_sizes': [1, 1], 'dropout_rate': 0.1, 'learning_rate': 0.0005, 'batch_size': 16}
   Successful trials: 30/30
 
 LSTM OPTIMIZATION:
   Best validation loss: inf
-  Best direction accuracy: 68.09%
-  Best parameters: {'units': [64, 32], 'dropout_rate': 0.4, 'learning_rate': 0.001, 'batch_size': 16, 'bidirectional': True}
+  Best direction accuracy: 57.45%
+  Best parameters: {'units': [32, 16], 'dropout_rate': 0.5, 'learning_rate': 0.0001, 'batch_size': 16, 'bidirectional': True}
   Successful trials: 25/25
 
+FINAL MODEL PERFORMANCE:
+
+Optimized CNN:
+  mse: 807.4646
+  rmse: 28.4159
+  mae: 25.8932
+  r2: 0.1608
+  mape: 6.3394
+  direction_accuracy: 59.5238
+
+Optimized LSTM:
+  mse: 909.1351
+  rmse: 30.1519
+  mae: 29.0405
+  r2: 0.0551
+  mape: 7.2422
+  direction_accuracy: 52.3810

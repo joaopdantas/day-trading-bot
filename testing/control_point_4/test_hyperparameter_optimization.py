@@ -1,8 +1,8 @@
 """
-Test Hyperparameter Optimization - Control Point 4 Task 2.11
+FIXED Test Hyperparameter Optimization Script
 
-This script optimizes the best performing models (CNN and LSTM) from the initial testing
-to achieve better performance for the trading bot.
+Key fix: Pass test_original_prices to the evaluate method to ensure 
+real price evaluation instead of scaled price evaluation.
 """
 
 import os
@@ -114,7 +114,7 @@ def prepare_optimization_data(df):
         train_size=0.7,
         val_size=0.15,
         scale_data=True,
-        differencing=True
+        differencing=False  # CRITICAL: Must match baseline models
     )
     
     if not data_dict:
@@ -130,6 +130,14 @@ def prepare_optimization_data(df):
                 data_dict[key] = np.nan_to_num(data_dict[key], nan=0.0)
     
     print(f"Data prepared: X_train shape: {data_dict['X_train'].shape}")
+    
+    # Log the original test price range for verification
+    test_prices = data_dict.get('test_original_prices', None)
+    if test_prices is not None:
+        print(f"Test set original price range: ${test_prices.min():.2f} - ${test_prices.max():.2f}")
+    else:
+        print("WARNING: No original test prices found in data preparation!")
+    
     return data_dict
 
 def optimize_cnn_model(data_dict):
@@ -245,12 +253,29 @@ def optimize_lstm_model(data_dict):
         return None
 
 def test_optimized_models(data_dict, cnn_results, lstm_results):
-    """Test the optimized models against the original baseline."""
+    """FIXED: Test optimized models with proper scaler passing."""
     print("\n" + "="*50)
-    print("🧪 TESTING OPTIMIZED MODELS")
+    print("🧪 TESTING OPTIMIZED MODELS WITH REAL PRICE EVALUATION")
     print("="*50)
     
     results_comparison = []
+    
+    # Get test original prices from data_dict
+    test_original_prices = data_dict.get('test_original_prices', None)
+    if test_original_prices is None:
+        print("❌ ERROR: No original test prices available!")
+        return []
+    
+    print(f"Using original test prices range: ${test_original_prices.min():.2f} - ${test_original_prices.max():.2f}")
+    
+    # CRITICAL: Get the scaler from data_dict
+    target_scaler = data_dict.get('target_scaler', None)
+    if target_scaler is None:
+        print("❌ ERROR: No target scaler available!")
+        return []
+    
+    print(f"✅ Found target scaler: {type(target_scaler)}")
+    print(f"Scaler range: {target_scaler.data_min_[0]:.2f} to {target_scaler.data_max_[0]:.2f}")
     
     # Test optimized CNN
     if cnn_results and cnn_results['best_params']:
@@ -270,6 +295,9 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 model_params=cnn_model_params
             )
             
+            # 🔧 ADD THIS LINE HERE - BEFORE build_model():
+            cnn_model.scaler = data_dict['target_scaler']
+            
             # Build and train with best parameters
             cnn_model.build_model(data_dict['X_train'].shape[1:])
             cnn_history = cnn_model.train(
@@ -282,7 +310,7 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 patience=10
             )
             
-            # Evaluate
+            # NOW when evaluate() is called, it will have the scaler
             cnn_metrics = cnn_model.evaluate(
                 X_test=data_dict['X_test'],
                 y_test=data_dict['y_test'],
@@ -295,11 +323,13 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 **cnn_metrics
             })
             
-            print(f"✅ Optimized CNN - RMSE: {cnn_metrics.get('rmse', 'N/A'):.4f}, "
+            print(f"✅ Optimized CNN - RMSE: ${cnn_metrics.get('rmse', 'N/A'):.2f}, "
                   f"Direction Acc: {cnn_metrics.get('direction_accuracy', 'N/A'):.2f}%")
             
         except Exception as e:
             print(f"❌ Optimized CNN testing failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Test optimized LSTM
     if lstm_results and lstm_results['best_params']:
@@ -318,6 +348,9 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 model_params=lstm_model_params
             )
             
+            # 🔧 ADD THIS LINE HERE - BEFORE build_model():
+            lstm_model.scaler = data_dict['target_scaler']
+            
             # Build and train with best parameters
             lstm_model.build_model(data_dict['X_train'].shape[1:])
             lstm_history = lstm_model.train(
@@ -330,7 +363,7 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 patience=10
             )
             
-            # Evaluate
+            # NOW when evaluate() is called, it will have the scaler
             lstm_metrics = lstm_model.evaluate(
                 X_test=data_dict['X_test'],
                 y_test=data_dict['y_test'],
@@ -343,11 +376,13 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
                 **lstm_metrics
             })
             
-            print(f"✅ Optimized LSTM - RMSE: {lstm_metrics.get('rmse', 'N/A'):.4f}, "
+            print(f"✅ Optimized LSTM - RMSE: ${lstm_metrics.get('rmse', 'N/A'):.2f}, "
                   f"Direction Acc: {lstm_metrics.get('direction_accuracy', 'N/A'):.2f}%")
             
         except Exception as e:
             print(f"❌ Optimized LSTM testing failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Save comparison results
     if results_comparison:
@@ -358,23 +393,48 @@ def test_optimized_models(data_dict, cnn_results, lstm_results):
         
         # Create visualization
         create_optimization_comparison_plot(comparison_df, output_dir)
+        
+        # Log final results for verification
+        print(f"\n📊 FINAL RESULTS VERIFICATION:")
+        for _, row in comparison_df.iterrows():
+            print(f"{row['model']}:")
+            print(f"  RMSE: ${row['rmse']:.2f} (should be ~$10-50 range)")
+            print(f"  MAPE: {row['mape']:.2f}% (should be <20%)")
+            print(f"  Direction Accuracy: {row['direction_accuracy']:.2f}%")
+            
+            # Validate if metrics are now realistic
+            if 10 <= row['rmse'] <= 100:
+                print(f"  ✅ RMSE is now in realistic range!")
+            else:
+                print(f"  ❌ RMSE still not realistic")
+                
+            if row['mape'] <= 25:
+                print(f"  ✅ MAPE is now realistic!")
+            else:
+                print(f"  ❌ MAPE still too high")
     
     return results_comparison
 
 def create_optimization_comparison_plot(comparison_df, output_dir):
     """Create comparison visualization for optimized models."""
     try:
-        plt.figure(figsize=(12, 8))
+        plt.figure(figsize=(15, 10))
         
         # Plot RMSE comparison
-        plt.subplot(2, 2, 1)
+        plt.subplot(2, 3, 1)
         models = comparison_df['model']
         rmse_values = comparison_df['rmse']
         colors = ['#1f77b4', '#ff7f0e']
-        plt.bar(models, rmse_values, color=colors)
+        bars = plt.bar(models, rmse_values, color=colors)
         plt.title('RMSE Comparison (Lower is Better)')
-        plt.ylabel('RMSE')
+        plt.ylabel('RMSE ($)')
         plt.xticks(rotation=45)
+        
+        # Add value labels on bars
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                    f'${height:.2f}', ha='center', va='bottom')
         
         # Add baseline comparison (from initial testing)
         plt.axhline(y=27.97, color='green', linestyle='--', label='Original CNN (27.97)')
@@ -382,12 +442,18 @@ def create_optimization_comparison_plot(comparison_df, output_dir):
         plt.legend()
         
         # Plot Direction Accuracy comparison
-        plt.subplot(2, 2, 2)
+        plt.subplot(2, 3, 2)
         dir_acc_values = comparison_df['direction_accuracy']
-        plt.bar(models, dir_acc_values, color=colors)
+        bars = plt.bar(models, dir_acc_values, color=colors)
         plt.title('Direction Accuracy Comparison (Higher is Better)')
         plt.ylabel('Direction Accuracy (%)')
         plt.xticks(rotation=45)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+                    f'{height:.1f}%', ha='center', va='bottom')
         
         # Add baseline comparison
         plt.axhline(y=50.0, color='green', linestyle='--', label='Original CNN (50.0%)')
@@ -395,12 +461,18 @@ def create_optimization_comparison_plot(comparison_df, output_dir):
         plt.legend()
         
         # Plot MAPE comparison
-        plt.subplot(2, 2, 3)
+        plt.subplot(2, 3, 3)
         mape_values = comparison_df['mape']
-        plt.bar(models, mape_values, color=colors)
+        bars = plt.bar(models, mape_values, color=colors)
         plt.title('MAPE Comparison (Lower is Better)')
         plt.ylabel('MAPE (%)')
         plt.xticks(rotation=45)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.2,
+                    f'{height:.1f}%', ha='center', va='bottom')
         
         # Add baseline comparison
         plt.axhline(y=5.40, color='green', linestyle='--', label='Original CNN (5.40%)')
@@ -408,17 +480,69 @@ def create_optimization_comparison_plot(comparison_df, output_dir):
         plt.legend()
         
         # Plot R² comparison
-        plt.subplot(2, 2, 4)
+        plt.subplot(2, 3, 4)
         r2_values = comparison_df['r2']
-        plt.bar(models, r2_values, color=colors)
+        bars = plt.bar(models, r2_values, color=colors)
         plt.title('R² Score Comparison (Higher is Better)')
         plt.ylabel('R² Score')
         plt.xticks(rotation=45)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                    f'{height:.3f}', ha='center', va='bottom')
         
         # Add baseline comparison
         plt.axhline(y=0.19, color='green', linestyle='--', label='Original CNN (0.19)')
         plt.axhline(y=-2.25, color='red', linestyle='--', label='Original LSTM (-2.25)')
         plt.legend()
+        
+        # Plot MAE comparison
+        plt.subplot(2, 3, 5)
+        mae_values = comparison_df['mae']
+        bars = plt.bar(models, mae_values, color=colors)
+        plt.title('MAE Comparison (Lower is Better)')
+        plt.ylabel('MAE ($)')
+        plt.xticks(rotation=45)
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                    f'${height:.2f}', ha='center', va='bottom')
+        
+        # Add improvement summary text
+        plt.subplot(2, 3, 6)
+        plt.axis('off')
+        
+        # Calculate improvements
+        improvement_text = "🎯 OPTIMIZATION SUMMARY\n\n"
+        
+        if len(comparison_df) > 0:
+            for _, row in comparison_df.iterrows():
+                model_name = row['model']
+                if 'CNN' in model_name:
+                    baseline_rmse = 27.97
+                    baseline_dir = 50.0
+                elif 'LSTM' in model_name:
+                    baseline_rmse = 55.89
+                    baseline_dir = 59.52
+                
+                rmse_improvement = ((baseline_rmse - row['rmse']) / baseline_rmse) * 100
+                dir_improvement = row['direction_accuracy'] - baseline_dir
+                
+                improvement_text += f"{model_name}:\n"
+                improvement_text += f"RMSE: {rmse_improvement:+.1f}% change\n"
+                improvement_text += f"Direction: {dir_improvement:+.1f}% points\n\n"
+        
+        improvement_text += "Target: Real price predictions\n"
+        improvement_text += "Expected RMSE: $10-50 range\n"
+        improvement_text += "Expected MAPE: <20%"
+        
+        plt.text(0.1, 0.9, improvement_text, transform=plt.gca().transAxes,
+                fontsize=10, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
         
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, 'optimization_comparison.png'), dpi=300, bbox_inches='tight')
@@ -428,6 +552,8 @@ def create_optimization_comparison_plot(comparison_df, output_dir):
         
     except Exception as e:
         print(f"Error creating comparison plot: {e}")
+        import traceback
+        traceback.print_exc()
 
 def main(symbol="MSFT"):
     """Main function to run hyperparameter optimization."""
@@ -452,16 +578,22 @@ def main(symbol="MSFT"):
     # Step 4: Optimize LSTM model (focus on direction accuracy)
     lstm_results = optimize_lstm_model(data_dict)
     
-    # Step 5: Test optimized models
+    # Step 5: Test optimized models with REAL PRICE EVALUATION
     if cnn_results or lstm_results:
         comparison_results = test_optimized_models(data_dict, cnn_results, lstm_results)
         
         # Create summary report
         with open(os.path.join(output_dir, 'optimization_summary.txt'), 'w') as f:
-            f.write(f"HYPERPARAMETER OPTIMIZATION SUMMARY\n")
+            f.write(f"HYPERPARAMETER OPTIMIZATION SUMMARY - FIXED EVALUATION\n")
             f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
             f.write(f"Dataset: {symbol} with {len(df)} data points\n")
             f.write(f"Period: {df.index[0]} to {df.index[-1]}\n\n")
+            
+            f.write("EVALUATION FIX APPLIED:\n")
+            f.write("- Models now evaluated using original test prices\n")
+            f.write("- RMSE should be in realistic $10-50 range\n")
+            f.write("- MAPE should be reasonable <20%\n")
+            f.write("- Direction accuracy optimized for trading\n\n")
             
             if cnn_results:
                 f.write("CNN OPTIMIZATION:\n")
@@ -476,25 +608,33 @@ def main(symbol="MSFT"):
                 f.write(f"  Best direction accuracy: {lstm_results['best_direction_accuracy']:.2f}%\n")
                 f.write(f"  Best parameters: {lstm_results['best_params']}\n")
                 f.write(f"  Successful trials: {lstm_results['successful_trials']}/{lstm_results['total_trials']}\n\n")
+            
+            if comparison_results:
+                f.write("FINAL MODEL PERFORMANCE:\n")
+                for result in comparison_results:
+                    f.write(f"\n{result['model']}:\n")
+                    for metric, value in result.items():
+                        if metric not in ['model', 'params']:
+                            f.write(f"  {metric}: {value:.4f}\n")
         
-        print(f"\n✅ Hyperparameter optimization completed!")
+        print(f"\n✅ Hyperparameter optimization completed with REAL PRICE EVALUATION!")
         print(f"📁 Results saved to {output_dir}")
         
         # Display improvement summary
         print(f"\n📈 IMPROVEMENT SUMMARY:")
         print(f"Original CNN: RMSE=27.97, Direction=50.0%")
         print(f"Original LSTM: RMSE=55.89, Direction=59.52%")
-        if cnn_results:
-            print(f"Optimized CNN: Target - reduce RMSE below 27.97")
-        if lstm_results:
-            print(f"Optimized LSTM: Target - improve direction accuracy above 59.52%")
+        
+        if comparison_results:
+            for result in comparison_results:
+                print(f"✅ {result['model']}: RMSE=${result['rmse']:.2f}, Direction={result['direction_accuracy']:.1f}%")
     else:
         print("❌ No optimization results to analyze.")
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Optimize model hyperparameters')
+    parser = argparse.ArgumentParser(description='Optimize model hyperparameters with fixed evaluation')
     parser.add_argument('--symbol', type=str, default='MSFT', help='Stock symbol to analyze')
     
     args = parser.parse_args()
