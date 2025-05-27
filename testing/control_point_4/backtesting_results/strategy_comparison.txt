@@ -1,0 +1,51 @@
+COMPREHENSIVE STRATEGY COMPARISON REPORT
+============================================================
+Generated: 2025-05-27 17:02:35
+
+PERFORMANCE SUMMARY:
+------------------------------------------------------------
+Strategy                  Return     Alpha      Sharpe   Trades  
+------------------------------------------------------------
+ML Trading Strategy       0.00%      -2.47%     0.00     0       
+Technical Analysis        -0.02%     -2.49%     -72.59   1       
+Buy and Hold              -1.47%     -3.94%     -1.93    2       
+
+============================================================
+
+ML TRADING STRATEGY - DETAILED RESULTS:
+----------------------------------------
+  Total Return: 0.00%
+  Alpha: -2.47%
+  Volatility: 0.00%
+  Sharpe Ratio: 0.00
+  Max Drawdown: 0.00%
+  Win Rate: 0.00%
+  Total Trades: 0
+  Final Value: $10000.00
+
+TECHNICAL ANALYSIS - DETAILED RESULTS:
+----------------------------------------
+  Total Return: -0.02%
+  Alpha: -2.49%
+  Volatility: 0.03%
+  Sharpe Ratio: -72.59
+  Max Drawdown: 0.02%
+  Win Rate: 0.00%
+  Total Trades: 1
+  Final Value: $9998.20
+
+BUY AND HOLD - DETAILED RESULTS:
+----------------------------------------
+  Total Return: -1.47%
+  Alpha: -3.94%
+  Volatility: 2.89%
+  Sharpe Ratio: -1.93
+  Max Drawdown: 2.19%
+  Win Rate: 0.00%
+  Total Trades: 2
+  Final Value: $9853.09
+
+BEST PERFORMERS:
+----------------------------------------
+Best Return: ML Trading Strategy (0.00%)
+Best Risk-Adjusted: ML Trading Strategy (Sharpe: 0.00)

@@ -1,0 +1,7 @@
+RISK MANAGEMENT TEST REPORT
+========================================
+Test Period: 2024-12-30 to 2025-05-23
+Stop Losses Triggered: 0
+Take Profits Triggered: 0
+Max Drawdown: 0.00%
+Risk-Adjusted Return: 0.00
