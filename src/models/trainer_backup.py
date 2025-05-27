@@ -92,10 +92,9 @@ class ModelTrainer:
         callbacks = [
             EarlyStopping(
                 monitor='val_loss', 
-                patience=max(patience, 25),  # Minimum 25 epochs patience
+                patience=patience, 
                 restore_best_weights=True,
-                verbose=1,
-                min_delta=0.0005  # Smaller improvement threshold
+                verbose=1
             ),
             ModelCheckpoint(
                 filepath=model_path,
@@ -105,9 +104,9 @@ class ModelTrainer:
             ),
             ReduceLROnPlateau(
                 monitor='val_loss',
-                factor=max(reduce_lr_factor, 0.7),  # Less aggressive reduction
-                patience=max(reduce_lr_patience, 8),  # More patience
-                min_lr=1e-5,  # Higher minimum LR
+                factor=reduce_lr_factor,
+                patience=reduce_lr_patience,
+                min_lr=1e-6,
                 verbose=1
             )
         ]

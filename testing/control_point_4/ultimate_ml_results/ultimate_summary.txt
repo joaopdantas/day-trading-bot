@@ -1,0 +1,52 @@
+ULTIMATE ML TESTING RESULTS
+Date: 2025-05-27 16:40:09
+Symbol: MSFT
+Dataset: 684 data points
+
+COMPLETE RESULTS:
+
+ultimate_cnn:
+  mse: 692.7004
+  rmse: 26.3192
+  mae: 21.9187
+  r2: 0.1642
+  mape: 5.6945
+  direction_accuracy: 46.1538
+
+ultimate_lstm:
+  mse: 746.0113
+  rmse: 27.3132
+  mae: 22.2633
+  r2: 0.0999
+  mape: 5.8258
+  direction_accuracy: 52.3077
+
+ultimate_gru:
+  mse: 234.5415
+  rmse: 15.3147
+  mae: 13.2218
+  r2: 0.7170
+  mape: 3.3299
+  direction_accuracy: 50.7692
+
+ENSEMBLE:
+  mse: 271.4492
+  rmse: 16.4757
+  mae: 14.3016
+  r2: 0.6725
+  mape: 3.6412
+  direction_accuracy: 52.3077
+
+SUMMARY:
+Best Model: ultimate_gru
+Best MAE: $13.22
+Total Improvement: 48.9%
+Original MAE: $25.89
+
+TECHNIQUES APPLIED:
+- Hyperparameter Optimization
+- Robust Training (Fixed Early Stopping)
+- Advanced Model Architectures
+- Ultimate Feature Engineering
+- Ensemble Methods
+- Production-Ready Evaluation

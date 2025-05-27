@@ -10,10 +10,9 @@ from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import (
     LSTM, Dense, Dropout, GRU,
-    Conv1D, MaxPooling1D, Flatten, Bidirectional, BatchNormalization
+    Conv1D, MaxPooling1D, Flatten, Bidirectional
 )
 from keras.optimizers import Adam
-from keras.regularizers import l2
 
 # Configure logging
 logging.basicConfig(
@@ -72,9 +71,8 @@ class ModelBuilder:
         model.add(Dense(output_units))
 
         # Compile with specified learning rate
-        optimizer = Adam(learning_rate=learning_rate, clipnorm=1.0)
-        # Use Huber loss for more robust training
-        model.compile(optimizer=optimizer, loss='huber', metrics=['mae', 'mse'])
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
         return model
 
     @staticmethod
@@ -114,9 +112,8 @@ class ModelBuilder:
         model.add(Dense(output_units))
 
         # Compile with specified learning rate
-        optimizer = Adam(learning_rate=learning_rate, clipnorm=1.0)
-        # Use Huber loss for more robust training
-        model.compile(optimizer=optimizer, loss='huber', metrics=['mae', 'mse'])
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
         return model
 
     # In src/models/builder.py - update the build_cnn_model method
@@ -162,7 +159,6 @@ class ModelBuilder:
         model.add(Dense(output_units))
         
         # Compile with specified learning rate
-        optimizer = Adam(learning_rate=learning_rate, clipnorm=1.0)
-        # Use Huber loss for more robust training
-        model.compile(optimizer=optimizer, loss='huber', metrics=['mae', 'mse'])
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
         return model

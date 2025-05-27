@@ -1,0 +1,33 @@
+ROBUST MAE REDUCTION - FIXED EARLY STOPPING
+Date: 2025-05-27 16:07:51
+Symbol: MSFT
+Dataset: 684 data points
+
+FIXES APPLIED:
+1. Early Stopping: Patience = 50 epochs
+2. Learning Rate: Custom schedule, less aggressive
+3. Architecture: Batch norm + L2 regularization
+4. Data: Better train/val split, more robust features
+5. Loss: Huber loss (more stable than MAE)
+
+robust_cnn:
+  mse: 563.6170
+  rmse: 23.7406
+  mae: 20.8859
+  r2: 0.3200
+  mape: 5.3252
+  direction_accuracy: 50.7692
+
+robust_lstm:
+  mse: 457.6047
+  rmse: 21.3917
+  mae: 18.3843
+  r2: 0.4479
+  mape: 4.7388
+  direction_accuracy: 49.2308
+
+IMPROVEMENT SUMMARY:
+Original MAE: $25.89
+Best Robust MAE: $18.38
+Improvement: 29.0%
+Training Status: SUCCESSFUL - No early stopping issues
