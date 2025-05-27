@@ -1,54 +1,37 @@
-const path = require("path");
-const CopyPlugin = require("copy-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  mode: "development",
   entry: {
-    popup: "./src/pages/popup/index.tsx",
-    background: "./src/background/index.ts",
-    content: "./src/content/index.ts",
-  },
-  output: {
-    path: path.resolve(__dirname, "public"),
-    filename: "[name]/index.js",
-    clean: false,
+    popup: './src/popup/index.tsx',
+    content: './src/content/index.ts',
+  },  output: {
+    path: path.resolve(__dirname, 'dist'),
+    filename: '[name].js',
   },
   module: {
     rules: [
       {
-        test: /\.(ts|tsx)$/,
-        use: "ts-loader",
+        test: /\.tsx?$/,
+        use: 'ts-loader',
         exclude: /node_modules/,
       },
       {
         test: /\.css$/,
-        use: ["style-loader", "css-loader"],
+        use: ['style-loader', 'css-loader'],
       },
     ],
   },
   resolve: {
-    extensions: [".tsx", ".ts", ".js"],
-  },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: "./src/pages/popup/index.html",
-      filename: "popup.html",
-      chunks: ["popup"],
-    }),
+    extensions: ['.tsx', '.ts', '.js'],
+  },  plugins: [
     new CopyPlugin({
       patterns: [
-        {
-          from: "public/icons",
-          to: "icons",
-        },
+        { from: 'manifest.json' },
+        { from: 'popup.html' },
+        { from: 'src/popup/popup.css', to: 'popup.css' },
+        { from: 'icons', to: 'icons' }
       ],
     }),
   ],
-  devtool: "cheap-module-source-map",
-  optimization: {
-    splitChunks: {
-      chunks: "all",
-    },
-  },
 };

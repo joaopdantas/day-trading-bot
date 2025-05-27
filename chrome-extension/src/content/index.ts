@@ -1,4 +1,4 @@
-import { MarketData, MessageType } from "../background";
+import { MarketData } from '../types';
 
 class MarketDataExtractor {
   private observer: MutationObserver;
@@ -7,19 +7,31 @@ class MarketDataExtractor {
 
   constructor() {
     this.observer = new MutationObserver(this.handleDOMChanges.bind(this));
+    console.log('MarketDataExtractor initialized');
   }
 
   start() {
+    // Extract initial data
+    this.extractInitialData();
+    
+    // Start observing DOM changes
     this.observer.observe(document.body, {
       childList: true,
-      subtree: true,
+      subtree: true
+    });    // Set up message listener for popup requests
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.type === 'GET_MARKET_DATA') {
+        console.log('Received request for market data');
+        console.log('Current data:', this.latestData);
+        sendResponse(this.latestData);
+        return true; // Keep the message channel open for asynchronous response
+      }
     });
-    this.extractInitialData();
   }
 
   private handleDOMChanges(mutations: MutationRecord[]) {
     const now = Date.now();
-    if (now - this.lastUpdate > this.updateInterval) {
+    if (now - this.lastUpdate >= this.updateInterval) {
       this.extractInitialData();
       this.lastUpdate = now;
     }
@@ -28,10 +40,9 @@ class MarketDataExtractor {
   private extractInitialData() {
     const data = this.extractMarketData();
     if (data) {
-      chrome.runtime.sendMessage({
-        type: MessageType.FETCH_MARKET_DATA,
-        data,
-      });
+      this.latestData = data;
+      // Send the data to any interested listeners
+      chrome.runtime.sendMessage({ type: 'MARKET_DATA_UPDATE', data });
     }
   }
 
@@ -83,6 +94,15 @@ class MarketDataExtractor {
   }
 }
 
-// Initialize content script
-export const extractor = new MarketDataExtractor();
-extractor.start();
+// Initialize and start the data extractor when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const extractor = new MarketDataExtractor();
+    extractor.start();
+    console.log('Market data extractor started');
+  });
+} else {
+  const extractor = new MarketDataExtractor();
+  extractor.start();
+  console.log('Market data extractor started');
+}
