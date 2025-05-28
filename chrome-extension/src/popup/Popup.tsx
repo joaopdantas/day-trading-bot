@@ -17,61 +17,6 @@ const getCurrentTabId = async () => {
   return tab.id;
 };
 
-const getMarketData = async () => {
-  try {
-    const tabId = await getCurrentTabId();
-    if (!tabId) {
-      throw new Error('No active tab found');
-    }
-
-    // Check if we're on a supported page
-    const tab = await chrome.tabs.get(tabId);
-    const isFinancePage = tab.url?.includes('finance.yahoo.com') || 
-                         tab.url?.includes('tradingview.com');
-    
-    if (!isFinancePage) {
-      throw new Error('Please navigate to Yahoo Finance or TradingView');
-    }
-
-    // First check if we can establish connection
-    try {
-      const response = await chrome.tabs.sendMessage(tabId, { type: "PING" });
-      if (!response || response.type !== "PONG") {
-        throw new Error('No response');
-      }
-    } catch (error) {
-      // If ping fails, reinject the content script and wait for it to load
-      console.log("Content script not ready, reinjecting...");
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['content.js']
-      });
-      
-      // Wait for script to initialize (500ms)
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    // Now try to get market data with timeout
-    const data = await Promise.race([
-      chrome.tabs.sendMessage(tabId, { type: "GET_MARKET_DATA" }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Data fetch timeout')), 5000)
-      )
-    ]);
-
-    if (!data) {
-      throw new Error("No data received from page");
-    }
-
-    return data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('An unexpected error occurred');
-  }
-};
-
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -83,6 +28,17 @@ const theme = createTheme({
   }
 });
 
+const isValidMarketData = (data: any): data is MarketData => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof data.symbol === 'string' &&
+    typeof data.price === 'number' &&
+    typeof data.volume === 'number' &&
+    typeof data.timestamp === 'number'
+  );
+};
+
 const Popup: React.FC = () => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,8 +47,73 @@ const Popup: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getMarketData();
-        setMarketData(data);
+        const tabId = await getCurrentTabId();
+        if (!tabId) {
+          throw new Error('No active tab found');
+        }
+
+        // Check if we're on a supported page
+        const tab = await chrome.tabs.get(tabId);
+        const isFinancePage = tab.url?.includes('finance.yahoo.com') || 
+                             tab.url?.includes('tradingview.com');
+        
+        if (!isFinancePage) {
+          throw new Error('Please navigate to Yahoo Finance or TradingView');
+        }
+
+        // First check if we can establish connection
+        try {
+          console.log("Attempting to ping content script...");
+          const response = await chrome.tabs.sendMessage(tabId, { type: "PING" });
+          console.log("Ping response:", response);
+          if (!response || response.type !== "PONG") {
+            throw new Error('Invalid ping response');
+          }
+        } catch (error) {
+          // If ping fails, reinject the content script and wait for it to load
+          console.log("Content script not ready, reinjecting...");
+          try {
+            await chrome.scripting.executeScript({
+              target: { tabId },
+              files: ['dist/content.js']
+            });
+            console.log("Content script reinjected successfully");
+          } catch (injectionError) {
+            console.error("Failed to inject content script:", injectionError);
+            throw new Error('Failed to inject content script. Please refresh the page.');
+          }
+          
+          // Wait longer for script to initialize (1000ms instead of 500ms)
+          console.log("Waiting for content script to initialize...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        console.log("Requesting market data...");
+        // Now try to get market data with timeout
+        const response = await Promise.race([
+          chrome.tabs.sendMessage(tabId, { type: "GET_MARKET_DATA" }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Data fetch timeout - please try refreshing the page')), 5000)
+          )
+        ]);
+
+        console.log("Raw response from content script:", response);
+
+        if (!response) {
+          throw new Error("No data received from page. Please make sure you're on a stock details page.");
+        }
+
+        if ('error' in response) {
+          throw new Error(response.error);
+        }
+
+        if (!isValidMarketData(response)) {
+          console.error("Invalid market data structure:", response);
+          throw new Error("Received malformed data from page. Expected price, symbol, and volume.");
+        }
+
+        console.log("Received valid market data:", response);
+        setMarketData(response);
         setError(null);
       } catch (err) {
         console.error("Error:", err);
