@@ -532,3 +532,4 @@ ADDITIONAL METRICS:
         """
         
         return report.strip()
+    

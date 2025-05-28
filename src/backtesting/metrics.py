@@ -378,3 +378,4 @@ PORTFOLIO METRICS:
             'rolling_volatility': rolling_volatility,
             'rolling_sharpe': rolling_sharpe
         }
+    

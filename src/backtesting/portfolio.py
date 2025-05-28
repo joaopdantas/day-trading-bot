@@ -332,3 +332,4 @@ class Portfolio:
             'total_costs': total_costs,
             'realized_pnl': self.realized_pnl
         }
+    

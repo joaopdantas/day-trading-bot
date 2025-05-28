@@ -485,3 +485,4 @@ class MomentumStrategy(TradingStrategy):
             signal['reasoning'].append(f'Error: {str(e)}')
         
         return signal
+    
