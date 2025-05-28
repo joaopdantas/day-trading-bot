@@ -1,51 +1,51 @@
 COMPREHENSIVE STRATEGY COMPARISON REPORT
 ============================================================
-Generated: 2025-05-27 17:02:35
+Generated: 2025-05-28 21:17:51
 
 PERFORMANCE SUMMARY:
 ------------------------------------------------------------
 Strategy                  Return     Alpha      Sharpe   Trades  
 ------------------------------------------------------------
-ML Trading Strategy       0.00%      -2.47%     0.00     0       
-Technical Analysis        -0.02%     -2.49%     -72.59   1       
-Buy and Hold              -1.47%     -3.94%     -1.93    2       
+ML Trading Strategy       0.40%      -5.83%     -0.28    8       
+Technical Analysis        -0.24%     -6.48%     -0.54    6       
+Buy and Hold              -1.95%     -8.19%     -2.57    2       
 
 ============================================================
 
 ML TRADING STRATEGY - DETAILED RESULTS:
 ----------------------------------------
-  Total Return: 0.00%
-  Alpha: -2.47%
-  Volatility: 0.00%
-  Sharpe Ratio: 0.00
-  Max Drawdown: 0.00%
-  Win Rate: 0.00%
-  Total Trades: 0
-  Final Value: $10000.00
+  Total Return: 0.40%
+  Alpha: -5.83%
+  Volatility: 3.46%
+  Sharpe Ratio: -0.28
+  Max Drawdown: 1.75%
+  Win Rate: 50.00%
+  Total Trades: 8
+  Final Value: $10039.93
 
 TECHNICAL ANALYSIS - DETAILED RESULTS:
 ----------------------------------------
-  Total Return: -0.02%
-  Alpha: -2.49%
-  Volatility: 0.03%
-  Sharpe Ratio: -72.59
-  Max Drawdown: 0.02%
-  Win Rate: 0.00%
-  Total Trades: 1
-  Final Value: $9998.20
+  Total Return: -0.24%
+  Alpha: -6.48%
+  Volatility: 4.65%
+  Sharpe Ratio: -0.54
+  Max Drawdown: 2.93%
+  Win Rate: 33.33%
+  Total Trades: 6
+  Final Value: $9975.65
 
 BUY AND HOLD - DETAILED RESULTS:
 ----------------------------------------
-  Total Return: -1.47%
-  Alpha: -3.94%
-  Volatility: 2.89%
-  Sharpe Ratio: -1.93
-  Max Drawdown: 2.19%
+  Total Return: -1.95%
+  Alpha: -8.19%
+  Volatility: 2.66%
+  Sharpe Ratio: -2.57
+  Max Drawdown: 1.95%
   Win Rate: 0.00%
   Total Trades: 2
-  Final Value: $9853.09
+  Final Value: $9804.63
 
 BEST PERFORMERS:
 ----------------------------------------
-Best Return: ML Trading Strategy (0.00%)
-Best Risk-Adjusted: ML Trading Strategy (Sharpe: 0.00)
+Best Return: ML Trading Strategy (0.40%)
+Best Risk-Adjusted: ML Trading Strategy (Sharpe: -0.28)
