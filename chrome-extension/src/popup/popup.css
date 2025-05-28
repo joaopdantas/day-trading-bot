@@ -5,7 +5,10 @@ body {
         sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: #ffffff;
+    color: #333333;
 }
+
 
 code {
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
@@ -18,4 +21,34 @@ code {
 
 .price-down {
     color: #f44336;
+}
+
+.MuiPaper-root {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.MuiTextField-root {
+    background-color: #ffffff;
+}
+
+.MuiSelect-root {
+    background-color: #ffffff;
+}
+
+.MuiAutocomplete-root .MuiOutlinedInput-root {
+    background-color: #ffffff;
+}
+
+.MuiButton-contained {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.MuiAlert-root {
+    background-color: #ffffff !important;
+}
+
+/* Add subtle hover effects */
+.MuiButton-root:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
 }

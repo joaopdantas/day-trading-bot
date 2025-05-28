@@ -1,146 +1,343 @@
 /// <reference types="chrome" />
-import React, { useEffect, useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  ThemeProvider, 
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  Paper,
+  ThemeProvider,
   createTheme,
   CircularProgress,
-  Alert
-} from '@mui/material';
-import { blue, grey } from '@mui/material/colors';
-import { MarketData } from '../types';
+  Alert,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  Stack,
+  IconButton,
+  SelectChangeEvent,
+  Autocomplete,
+} from "@mui/material";
+import { blue, grey } from "@mui/material/colors";
+import { MarketData, DataSource } from "../types";
+
+interface SymbolSuggestion {
+  symbol: string;
+  name: string;
+}
 
 const getCurrentTabId = async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab.id;
+  return tab?.id;
 };
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "light",
     primary: blue,
     background: {
-      default: grey[900],
-      paper: grey[800],
-    }
-  }
+      default: "#ffffff",
+      paper: "#f5f5f5",
+    },
+  },
 });
 
 const isValidMarketData = (data: any): data is MarketData => {
   return (
-    typeof data === 'object' &&
+    typeof data === "object" &&
     data !== null &&
-    typeof data.symbol === 'string' &&
-    typeof data.price === 'number' &&
-    typeof data.volume === 'number' &&
-    typeof data.timestamp === 'number'
+    typeof data.symbol === "string" &&
+    typeof data.price === "number" &&
+    !isNaN(data.price) &&
+    typeof data.volume === "number" &&
+    !isNaN(data.volume) &&
+    typeof data.timestamp === "number" &&
+    !isNaN(data.timestamp)
   );
 };
 
 const Popup: React.FC = () => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [symbol, setSymbol] = useState<string>("");
+  const [dataSource, setDataSource] = useState<DataSource>("yahoo_finance");
+  const [apiKey, setApiKey] = useState<string>("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [suggestions, setSuggestions] = useState<SymbolSuggestion[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<SymbolSuggestion | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const tabId = await getCurrentTabId();
-        if (!tabId) {
-          throw new Error('No active tab found');
-        }
+  const fetchData = async (symbol: string, source: DataSource) => {
+    if (!symbol) {
+      setError("Please enter a symbol");
+      return;
+    }
 
-        // Check if we're on a supported page
-        const tab = await chrome.tabs.get(tabId);
-        const isFinancePage = tab.url?.includes('finance.yahoo.com') || 
-                             tab.url?.includes('tradingview.com');
-        
-        if (!isFinancePage) {
-          throw new Error('Please navigate to Yahoo Finance or TradingView');
-        }
+    setLoading(true);
+    setError(null);
+    setMarketData(null);
 
-        // First check if we can establish connection
-        try {
-          console.log("Attempting to ping content script...");
-          const response = await chrome.tabs.sendMessage(tabId, { type: "PING" });
-          console.log("Ping response:", response);
-          if (!response || response.type !== "PONG") {
-            throw new Error('Invalid ping response');
-          }
-        } catch (error) {
-          // If ping fails, reinject the content script and wait for it to load
-          console.log("Content script not ready, reinjecting...");
-          try {
-            await chrome.scripting.executeScript({
-              target: { tabId },
-              files: ['dist/content.js']
-            });
-            console.log("Content script reinjected successfully");
-          } catch (injectionError) {
-            console.error("Failed to inject content script:", injectionError);
-            throw new Error('Failed to inject content script. Please refresh the page.');
-          }
-          
-          // Wait longer for script to initialize (1000ms instead of 500ms)
-          console.log("Waiting for content script to initialize...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        console.log("Requesting market data...");
-        // Now try to get market data with timeout
-        const response = await Promise.race([
-          chrome.tabs.sendMessage(tabId, { type: "GET_MARKET_DATA" }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Data fetch timeout - please try refreshing the page')), 5000)
-          )
-        ]);
-
-        console.log("Raw response from content script:", response);
-
-        if (!response) {
-          throw new Error("No data received from page. Please make sure you're on a stock details page.");
-        }
-
-        if ('error' in response) {
-          throw new Error(response.error);
-        }
-
-        if (!isValidMarketData(response)) {
-          console.error("Invalid market data structure:", response);
-          throw new Error("Received malformed data from page. Expected price, symbol, and volume.");
-        }
-
-        console.log("Received valid market data:", response);
-        setMarketData(response);
-        setError(null);
-      } catch (err) {
-        console.error("Error:", err);
-        setError(err instanceof Error ? err.message : "An unexpected error occurred");
-      } finally {
-        setLoading(false);
+    try {
+      const tabId = await getCurrentTabId();
+      if (!tabId) {
+        throw new Error("No active tab found");
       }
-    };
 
-    fetchData();
+      // First check if we can establish connection
+      try {
+        console.log("Attempting to ping content script...");
+        const response = await chrome.tabs.sendMessage(tabId, {
+          type: "PING",
+        });
+        console.log("Ping response:", response);
+        if (!response || response.type !== "PONG") {
+          throw new Error("Failed to connect to data service");
+        }
+      } catch (error) {
+        // If ping fails, reinject the content script
+        console.log("Content script not ready, reinjecting...");
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ["dist/content.js"],
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      console.log("Requesting market data for:", symbol);
+      const response = await chrome.tabs.sendMessage(tabId, {
+        type: "GET_MARKET_DATA",
+        data: { symbol, source },
+      });
+
+      console.log("API response:", response);
+
+      if (!response) {
+        throw new Error("No response received from the data service");
+      }
+
+      if ("error" in response) {
+        throw new Error(response.error);
+      }
+
+      if (!isValidMarketData(response)) {
+        console.error("Invalid market data structure:", response);
+        throw new Error("Received invalid data format from the API");
+      }
+
+      setMarketData(response);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      setMarketData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchSymbols = async (query: string) => {
+    try {
+      const tabId = await getCurrentTabId();
+      if (!tabId) {
+        throw new Error("No active tab found");
+      }
+
+      const response = await chrome.tabs.sendMessage(tabId, {
+        type: "SEARCH_SYMBOLS",
+        data: { query },
+      });
+
+      if (response?.suggestions) {
+        setSuggestions(response.suggestions);
+      } else if (response?.error) {
+        console.error("Symbol search error:", response.error);
+      }
+    } catch (error) {
+      console.error("Error searching symbols:", error);
+    }
+  };
+
+  const handleSymbolChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value.toUpperCase();
+    setSymbol(value);
+    if (value.length >= 1) {
+      await searchSymbols(value);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSourceChange = (event: SelectChangeEvent) => {
+    setDataSource(event.target.value as DataSource);
+  };
+
+  const handleSubmit = () => {
+    if (!symbol) {
+      setError("Please enter a symbol");
+      return;
+    }
+    fetchData(symbol, dataSource);
+  };
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !loading) {
+      handleSubmit();
+    }
+  };
+
+  const handleApiKeyChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const key = e.target.value.trim();
+    setApiKey(key);
+    if (!key) return;
+    
+    setLoading(true);
+    try {
+      // Test the API key with a simple request
+      const tabId = await getCurrentTabId();
+      if (!tabId) {
+        throw new Error("No active tab found");
+      }
+
+      // Validate the API key with the content script
+      const response = await chrome.tabs.sendMessage(tabId, {
+        type: "VALIDATE_API_KEY",
+        data: { source: dataSource, apiKey: key },
+      });
+
+      if (response?.isValid) {
+        // Save API key to storage only if valid
+        chrome.storage.local.set({ [`${dataSource}_api_key`]: key });
+        setError(null);
+      } else {
+        setError("Invalid API key. Please check and try again.");
+      }
+    } catch (err) {
+      console.error("Error validating API key:", err);
+      setError(err instanceof Error ? err.message : "Failed to validate API key");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load saved API key when data source changes
+  useEffect(() => {
+    chrome.storage.local.get(`${dataSource}_api_key`, (result) => {
+      const savedKey = result[`${dataSource}_api_key`];
+      if (savedKey) {
+        setApiKey(savedKey);
+      } else {
+        setApiKey("");
+      }
+    });
+  }, [dataSource]);
+
+  // Load initial suggestions
+  useEffect(() => {
+    searchSymbols("");
   }, []);
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ width: 350, p: 2, bgcolor: 'background.default', minHeight: 200 }}>
-        <Typography variant="h6" gutterBottom>
-          Market Data
-        </Typography>
-        {loading ? (
+      <Box sx={{ width: 350, p: 2, bgcolor: "background.default", minHeight: 200 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Market Data</Typography>
+          <Button size="small" onClick={() => setShowSettings(!showSettings)}>
+            {showSettings ? "Hide Settings" : "Settings"}
+          </Button>
+        </Box>
+        
+        <Stack spacing={2} sx={{ mb: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel id="data-source-label">Data Source</InputLabel>
+            <Select
+              labelId="data-source-label"
+              value={dataSource}
+              label="Data Source"
+              onChange={handleSourceChange}
+              disabled={loading}
+            >
+              <MenuItem value="yahoo_finance">Yahoo Finance</MenuItem>
+              <MenuItem value="alpha_vantage">Alpha Vantage</MenuItem>
+            </Select>
+          </FormControl>
+
+          {showSettings && (
+            <TextField
+              fullWidth
+              label={`${dataSource === 'alpha_vantage' ? 'Alpha Vantage' : 'Yahoo Finance'} API Key`}
+              value={apiKey}
+              onChange={handleApiKeyChange}
+              type="password"
+              placeholder="Enter your API key"
+              helperText={dataSource === 'alpha_vantage' ? "Required for Alpha Vantage" : "Optional for Yahoo Finance"}
+            />
+          )}
+
+          <Autocomplete
+            freeSolo
+            options={suggestions}
+            getOptionLabel={(option) => 
+              typeof option === 'string' ? option : `${option.symbol} - ${option.name}`
+            }
+            value={selectedSuggestion}
+            onChange={(_, newValue) => {
+              if (typeof newValue === 'string') {
+                setSymbol(newValue);
+                setSelectedSuggestion(null);
+              } else if (newValue) {
+                setSymbol(newValue.symbol);
+                setSelectedSuggestion(newValue);
+              } else {
+                setSymbol("");
+                setSelectedSuggestion(null);
+              }
+            }}
+            onInputChange={(_, value) => {
+              setSymbol(value.toUpperCase());
+              searchSymbols(value);
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                fullWidth
+                label="Symbol"
+                placeholder="Enter stock symbol (e.g. MSFT)"
+                disabled={loading}
+                error={Boolean(error && !loading)}
+                helperText={error && !loading ? error : null}
+                onKeyPress={handleKeyPress}
+              />
+            )}
+            renderOption={(props, option) => (
+              <li {...props}>
+                <Typography variant="body1">{option.symbol}</Typography>
+                <Typography variant="caption" sx={{ ml: 1, color: "text.secondary" }}>
+                  {option.name}
+                </Typography>
+              </li>
+            )}
+            loading={loading}
+            disabled={loading}
+          />
+
+          <Button 
+            variant="contained" 
+            color="primary" 
+            fullWidth 
+            onClick={handleSubmit}
+            disabled={loading || !symbol}
+          >
+            {loading ? "Fetching..." : "Get Data"}
+          </Button>
+        </Stack>
+
+        {loading && (
           <Box display="flex" justifyContent="center" alignItems="center" height={140}>
             <CircularProgress />
           </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        ) : marketData ? (
+        )}
+
+        {!loading && marketData && (
           <Paper elevation={3} sx={{ p: 2 }}>
             <Typography variant="h5" gutterBottom>
               {marketData.symbol}
@@ -154,10 +351,15 @@ const Popup: React.FC = () => {
             <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
               Last updated: {new Date(marketData.timestamp).toLocaleTimeString()}
             </Typography>
+            <Typography variant="caption" color="textSecondary" display="block">
+              Source: {marketData.source || dataSource}
+            </Typography>
           </Paper>
-        ) : (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            No market data available. Please navigate to a supported financial page.
+        )}
+
+        {!loading && error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
           </Alert>
         )}
       </Box>
