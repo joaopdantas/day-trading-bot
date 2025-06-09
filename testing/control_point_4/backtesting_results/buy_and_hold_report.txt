@@ -1,38 +1,26 @@
 === FIXED BACKTESTING PERFORMANCE REPORT ===
-Generated: 2025-05-29 14:02:05
+Generated: 2025-06-09 14:37:39
 
 PORTFOLIO PERFORMANCE:
-â€¢ Initial Capital: $10,000.00
-â€¢ Final Value: $10,491.16
-â€¢ Total Return: 5.96%
-â€¢ Benchmark Return: 6.23%
-â€¢ Alpha (Excess Return): -1.32%
+• Initial Capital: $10,000.00
+• Final Value: $10,145.08
+• Total Return: 1.45%
+• Benchmark Return: 9.77%
+• Alpha (Excess Return): -8.32%
 
 RISK METRICS:
-â€¢ Volatility (Annual): 0.00%
-â€¢ Sharpe Ratio: 0.00
-â€¢ Sortino Ratio: inf
-â€¢ Maximum Drawdown: 0.00%
-â€¢ Calmar Ratio: inf
+• Volatility (Annual): 7.78%
+• Sharpe Ratio: 0.54
+• Maximum Drawdown: 5.56%
 
 TRADING STATISTICS:
-â€¢ Total Trades: 1
-â€¢ Buy Trades: 1
-â€¢ Sell Trades: 0
-â€¢ Win Rate: 0.00%
-â€¢ Profit Factor: 0.00
-â€¢ Average Daily Return: 0.0596
-â€¢ Hit Rate (Positive Days): 100.00%
+• Total Trades: 1
+• Signals Generated: 95
+• Win Rate: 0.00%
+• Winning Trades: 0
+• Losing Trades: 0
 
-RISK MANAGEMENT:
-â€¢ Stop Losses Triggered: 0
-â€¢ Take Profits Triggered: 0
-
-ADDITIONAL METRICS:
-â€¢ Trading Days: 2
-â€¢ VaR (95%): 0.0596
-â€¢ CVaR (95%): 0.0596
-â€¢ Best Trade: 0.00%
-â€¢ Worst Trade: 0.00%
+TRADE DETAILS:
+• Trade 1: BUY 6 shares at $446.20
 
 === END REPORT ===

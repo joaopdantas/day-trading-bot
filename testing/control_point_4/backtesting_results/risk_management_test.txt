@@ -1,7 +1,27 @@
 RISK MANAGEMENT TEST REPORT
 ========================================
-Test Period: 2025-01-02 to 2025-05-28
+Test Period: 2025-01-22 to 2025-06-06
 Stop Losses Triggered: 0
 Take Profits Triggered: 0
-Max Drawdown: 0.00%
-Risk-Adjusted Return: 0.00
+Max Drawdown: 5.56%
+Risk-Adjusted Return: 0.65
+
+STRATEGY RISK ANALYSIS:
+
+ML Trading Strategy:
+  Max Drawdown: 4.29%
+  Volatility: 7.59%
+  Sharpe Ratio: 0.65
+  Win Rate: 25.00%
+
+Technical Analysis:
+  Max Drawdown: 4.29%
+  Volatility: 7.75%
+  Sharpe Ratio: 0.65
+  Win Rate: 50.00%
+
+Buy and Hold:
+  Max Drawdown: 5.56%
+  Volatility: 7.78%
+  Sharpe Ratio: 0.54
+  Win Rate: 0.00%

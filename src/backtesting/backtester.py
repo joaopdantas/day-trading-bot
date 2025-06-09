@@ -111,7 +111,7 @@ class ProductionBacktester:
             is_buy_and_hold = isinstance(self.strategy, BuyAndHoldStrategy)
             
             # Skip first few days for technical indicators UNLESS it's Buy & Hold
-            if i < 20 and not is_buy_and_hold:
+            if i < 5 and not is_buy_and_hold:
                 self._record_portfolio_state(date, row)
                 continue
             
