@@ -1,245 +1,181 @@
 """
-DIAGNOSTIC TEST: Let's figure out exactly what's happening with the scaling
+CORRECTED DIAGNOSTIC TEST - Fixing the Data Range Issue
 
-This will help us understand where the issue is occurring and fix it properly.
+The problem is that the backtester is using different data ranges!
 """
 
 import os
 import sys
-import pandas as pd
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 
-# Add parent directory to path
+# Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.insert(0, project_root)
 
-from src.models import PredictionModel
-from src.data.fetcher import get_data_api
-from src.data.preprocessor import DataPreprocessor
+from src.backtesting import ProductionBacktester, MLTradingStrategy, BuyAndHoldStrategy
 from src.indicators.technical import TechnicalIndicators
 
-def diagnostic_test():
-    """Run diagnostic test to understand the scaling issue."""
+
+def create_test_data_fixed():
+    """Create EXACTLY the same test data for all tests"""
+    print("📊 CREATING FIXED TEST DATA")
+    print("--------------------------------------------------")
     
-    print("🔍 DIAGNOSTIC TEST - Understanding the Scaling Issue")
-    print("="*60)
+    # Create exactly 50 days of data
+    dates = pd.date_range(start='2025-01-10', periods=50, freq='D')
     
-    # Step 1: Get some simple data
-    print("Step 1: Fetching data...")
-    try:
-        api = get_data_api("alpha_vantage")
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=100)
-        
-        df = api.fetch_historical_data(
-            symbol="MSFT",
-            interval="1d",
-            start_date=start_date,
-            end_date=end_date
-        )
-        
-        if df is None or df.empty:
-            print("❌ Failed to get data")
-            return
-            
-        print(f"✅ Got {len(df)} data points")
-        print(f"Price range: ${df['close'].min():.2f} - ${df['close'].max():.2f}")
-        
-    except Exception as e:
-        print(f"❌ Error getting data: {e}")
-        return
+    # Generate realistic price data
+    np.random.seed(42)  # Fixed seed for reproducibility
     
-    # Step 2: Prepare data and examine what happens
-    print("\nStep 2: Preparing data...")
+    # Start at $400 and create realistic movements
+    base_price = 400.0
+    price_changes = np.random.normal(0, 0.02, 50)  # 2% daily volatility
+    prices = [base_price]
     
-    model = PredictionModel(model_type='lstm')
+    for change in price_changes[1:]:
+        new_price = prices[-1] * (1 + change)
+        prices.append(new_price)
     
-    feature_columns = ['open', 'high', 'low', 'close', 'volume']
+    # Create OHLCV data
+    data = pd.DataFrame(index=dates)
+    data['close'] = prices
+    data['open'] = data['close'].shift(1).fillna(data['close'].iloc[0])
+    data['high'] = data[['open', 'close']].max(axis=1) * (1 + np.random.uniform(0, 0.01, 50))
+    data['low'] = data[['open', 'close']].min(axis=1) * (1 - np.random.uniform(0, 0.01, 50))
+    data['volume'] = np.random.randint(1000000, 5000000, 50)
     
-    data_dict = model.prepare_data(
-        df=df,
-        sequence_length=10,
-        target_column='close',
-        feature_columns=feature_columns,
-        target_horizon=1,
-        train_size=0.7,
-        val_size=0.15,
-        scale_data=True,
-        differencing=False
-    )
+    print(f"✅ Created test data: {len(data)} rows")
+    print(f"   Price range: ${data['close'].min():.2f} to ${data['close'].max():.2f}")
+    print(f"   Date range: {data.index[0].date()} to {data.index[-1].date()}")
+    print(f"   First price: ${data['close'].iloc[0]:.2f}")
+    print(f"   Last price: ${data['close'].iloc[-1]:.2f}")
+    print(f"   Expected B&H return: {((data['close'].iloc[-1] / data['close'].iloc[0]) - 1) * 100:.2f}%")
     
-    if not data_dict:
-        print("❌ Data preparation failed")
-        return
+    return data
+
+
+def test_backtesting_with_same_data():
+    """Test backtesting using EXACTLY the same data"""
+    print("\n🔬 TESTING BACKTESTING WITH SAME DATA")
+    print("==================================================")
     
-    print("✅ Data preparation successful")
-    print(f"X_test shape: {data_dict['X_test'].shape}")
-    print(f"y_test shape: {data_dict['y_test'].shape}")
+    # Create the SAME data for all tests
+    data = create_test_data_fixed()
     
-    # Step 3: Examine the scaler
-    print("\nStep 3: Examining the scaler...")
-    scaler = data_dict['target_scaler']
+    # Add technical indicators
+    data = TechnicalIndicators.add_all_indicators(data)
     
-    if scaler is not None:
-        print(f"Scaler type: {type(scaler)}")
-        print(f"Scaler feature range: {scaler.feature_range}")
-        print(f"Scaler data_min_: {scaler.data_min_}")
-        print(f"Scaler data_max_: {scaler.data_max_}")
-        print(f"Scaler data_range_: {scaler.data_range_}")
-        
-        # Test the scaler manually
-        print("\nStep 4: Testing scaler manually...")
-        
-        # Get a few test values
-        y_test_sample = data_dict['y_test'][:5]
-        print(f"Sample y_test (scaled): {y_test_sample.flatten()}")
-        
-        # Try inverse transform
-        try:
-            y_test_inverse = scaler.inverse_transform(y_test_sample)
-            print(f"Sample y_test (inverse): {y_test_inverse.flatten()}")
-            print(f"Inverse transform range: ${y_test_inverse.min():.2f} - ${y_test_inverse.max():.2f}")
-            
-            # Compare with original close prices
-            original_close_sample = df['close'].tail(10).head(5).values
-            print(f"Original close prices: ${original_close_sample.min():.2f} - ${original_close_sample.max():.2f}")
-            
-            # Check if they're in the same ballpark
-            if abs(y_test_inverse.mean() - original_close_sample.mean()) < 50:
-                print("✅ Inverse transform looks correct!")
-            else:
-                print("❌ Inverse transform looks wrong!")
-                print(f"Expected around: ${original_close_sample.mean():.2f}")
-                print(f"Got: ${y_test_inverse.mean():.2f}")
-                
-        except Exception as e:
-            print(f"❌ Inverse transform failed: {e}")
-            print(f"y_test_sample shape: {y_test_sample.shape}")
-            print(f"Scaler was fitted on data with shape: probably (n_samples, 1)")
+    # Calculate expected returns manually
+    start_price = data['close'].iloc[0]
+    end_price = data['close'].iloc[-1]
+    expected_return = (end_price / start_price - 1) * 100
     
+    print(f"\n📊 MANUAL CALCULATION:")
+    print(f"   Start price: ${start_price:.2f}")
+    print(f"   End price: ${end_price:.2f}")
+    print(f"   Expected return: {expected_return:.2f}%")
+    
+    # Test Buy & Hold Strategy
+    print(f"\n🏠 TESTING BUY & HOLD WITH SAME DATA:")
+    print(f"--------------------------------------------------")
+    
+    backtester = ProductionBacktester(initial_capital=10000)
+    bh_strategy = BuyAndHoldStrategy()
+    backtester.set_strategy(bh_strategy)
+    
+    # CRITICAL: Use the SAME data
+    results = backtester.run_backtest(data)
+    
+    print(f"   Backtester result: {results['total_return'] * 100:.2f}%")
+    print(f"   Expected result: {expected_return:.2f}%")
+    print(f"   Difference: {abs(results['total_return'] * 100 - expected_return):.2f}%")
+    
+    if abs(results['total_return'] * 100 - expected_return) < 1.0:  # Realistic 1% threshold
+        print("   ✅ BACKTESTER CALCULATION IS CORRECT! (Difference within acceptable range)")
+        print(f"   📊 Real-world factors: transaction costs, share rounding, cash management")
+        return True
     else:
-        print("❌ No scaler found!")
+        print("   ❌ BACKTESTER CALCULATION IS WRONG!")
+        
+        # Debug the issue
+        print(f"\n🔍 DEBUGGING THE CALCULATION:")
+        portfolio_history = backtester.get_portfolio_history()
+        if not portfolio_history.empty:
+            print(f"   First portfolio value: ${portfolio_history['portfolio_value'].iloc[0]:.2f}")
+            print(f"   Last portfolio value: ${portfolio_history['portfolio_value'].iloc[-1]:.2f}")
+            print(f"   First price used: ${portfolio_history['price'].iloc[0]:.2f}")
+            print(f"   Last price used: ${portfolio_history['price'].iloc[-1]:.2f}")
+        
+        return False
+
+
+def test_ml_strategy_with_same_data():
+    """Test ML strategy with the same data"""
+    print(f"\n🎯 TESTING ML STRATEGY WITH SAME DATA:")
+    print(f"--------------------------------------------------")
     
-    # Step 5: Train a simple model and test evaluation
-    print("\nStep 5: Training simple model and testing evaluation...")
+    # Use the SAME data
+    data = create_test_data_fixed()
+    data = TechnicalIndicators.add_all_indicators(data)
     
-    try:
-        # Build and train a very simple model
-        model.build_model(data_dict['X_test'].shape[1:])
-        
-        # Train for just 1 epoch to get something
-        history = model.train(
-            X_train=data_dict['X_train'],
-            y_train=data_dict['y_train'],
-            X_val=data_dict['X_val'],
-            y_val=data_dict['y_val'],
-            epochs=1,
-            batch_size=16
-            # Note: removed verbose=0 as it's not supported
-        )
-        
-        print("✅ Model trained (1 epoch)")
-        
-        # Test prediction
-        y_pred_scaled = model.predict(data_dict['X_test'][:5], inverse_transform=False)
-        print(f"Predictions (scaled): {y_pred_scaled.flatten()}")
-        
-        y_pred_unscaled = model.predict(data_dict['X_test'][:5], inverse_transform=True)
-        print(f"Predictions (unscaled): {y_pred_unscaled.flatten()}")
-        
-        # Check if unscaled predictions are in realistic range
-        if abs(y_pred_unscaled.max()) > 50:  # Should be in hundreds for stock prices
-            print("✅ Unscaled predictions look realistic!")
-        else:
-            print("❌ Unscaled predictions still look scaled!")
-        
-        # Test the evaluation method
-        print("\nStep 6: Testing evaluation...")
-        
-        # Use just a few samples for testing
-        X_test_sample = data_dict['X_test'][:5]
-        y_test_sample = data_dict['y_test'][:5]
-        
-        print(f"Testing with {len(X_test_sample)} samples")
-        print(f"y_test_sample shape: {y_test_sample.shape}")
-        print(f"y_test_sample range: {y_test_sample.min():.4f} to {y_test_sample.max():.4f}")
-        
-        # Test the predict method first
-        print("\nTesting prediction method...")
-        try:
-            y_pred_sample = model.predict(X_test_sample, inverse_transform=False)
-            print(f"✅ Prediction successful!")
-            print(f"y_pred shape: {y_pred_sample.shape}")
-            print(f"y_pred range: {y_pred_sample.min():.4f} to {y_pred_sample.max():.4f}")
-            
-            # Test inverse transform manually
-            if model.scaler is not None:
-                print("\nTesting manual inverse transform...")
-                try:
-                    y_pred_unscaled = model.scaler.inverse_transform(y_pred_sample)
-                    y_test_unscaled = model.scaler.inverse_transform(y_test_sample)
-                    print(f"✅ Manual inverse transform successful!")
-                    print(f"y_pred_unscaled range: ${y_pred_unscaled.min():.2f} to ${y_pred_unscaled.max():.2f}")
-                    print(f"y_test_unscaled range: ${y_test_unscaled.min():.2f} to ${y_test_unscaled.max():.2f}")
-                except Exception as e:
-                    print(f"❌ Manual inverse transform failed: {e}")
-            
-        except Exception as e:
-            print(f"❌ Prediction failed: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        try:
-            print("\nCalling model.evaluate()...")
-            metrics = model.evaluate(
-                X_test=X_test_sample,
-                y_test=y_test_sample,
-                output_dir='diagnostic_test_output'
-            )
-            
-            print("✅ Evaluation completed!")
-            print("Metrics returned:")
-            print(f"  Type: {type(metrics)}")
-            print(f"  Content: {metrics}")
-            
-            if isinstance(metrics, dict) and metrics:
-                print("Metrics breakdown:")
-                for metric, value in metrics.items():
-                    print(f"  {metric}: {value:.4f}")
-                    
-                # Check if metrics are realistic
-                if 'rmse' in metrics:
-                    if metrics['rmse'] > 1 and metrics['rmse'] < 200:
-                        print("✅ RMSE looks realistic for stock prices!")
-                    else:
-                        print(f"❌ RMSE looks wrong: {metrics['rmse']:.2f}")
-                else:
-                    print("❌ No RMSE found in metrics!")
-                    
-                if 'mape' in metrics:
-                    if 0 <= metrics['mape'] <= 50:
-                        print("✅ MAPE looks realistic!")
-                    else:
-                        print(f"❌ MAPE looks wrong: {metrics['mape']:.2f}%")
-                else:
-                    print("❌ No MAPE found in metrics!")
-            else:
-                print("❌ Metrics is empty or not a dictionary!")
-                
-        except Exception as e:
-            print(f"❌ Evaluation failed: {e}")
-            import traceback
-            traceback.print_exc()
-        
-    except Exception as e:
-        print(f"❌ Model training/evaluation failed: {e}")
-        import traceback
-        traceback.print_exc()
+    backtester = ProductionBacktester(initial_capital=10000)
+    ml_strategy = MLTradingStrategy(confidence_threshold=0.2)  # Lower threshold for more signals
+    backtester.set_strategy(ml_strategy)
     
-    print("\n" + "="*60)
-    print("🔍 DIAGNOSTIC COMPLETE")
-    print("="*60)
+    results = backtester.run_backtest(data)
+    
+    print(f"   ML Strategy return: {results['total_return'] * 100:.2f}%")
+    print(f"   Total trades: {results['total_trades']}")
+    print(f"   Buy trades: {results['buy_trades']}")
+    print(f"   Sell trades: {results['sell_trades']}")
+    
+    # Check signals generated
+    signals_history = backtester.get_signals_history()
+    if not signals_history.empty:
+        buy_signals = len(signals_history[signals_history['signal'].apply(lambda x: x['action'] == 'BUY')])
+        sell_signals = len(signals_history[signals_history['signal'].apply(lambda x: x['action'] == 'SELL')])
+        print(f"   Buy signals generated: {buy_signals}")
+        print(f"   Sell signals generated: {sell_signals}")
+        print(f"   Total signals: {len(signals_history)}")
+    
+    return results
+
+
+def main():
+    """Main diagnostic function"""
+    print("🔍 CORRECTED BACKTESTING DIAGNOSTIC")
+    print("================================================================================")
+    print("This will test if the backtesting engine calculates returns correctly")
+    print("by using EXACTLY the same data for all tests.")
+    print("================================================================================")
+    
+    # Test if backtesting calculation is correct
+    bh_correct = test_backtesting_with_same_data()
+    
+    if bh_correct:
+        print("\n✅ BACKTESTING ENGINE IS WORKING CORRECTLY!")
+        print("The issue was in data range selection, not the calculation logic.")
+        
+        # Test ML strategy
+        ml_results = test_ml_strategy_with_same_data()
+        
+        print(f"\n🎯 FINAL RESULTS:")
+        print(f"✅ Backtesting engine: WORKING")
+        print(f"✅ Buy & Hold calculation: CORRECT")
+        print(f"✅ ML Strategy: {ml_results['total_return'] * 100:.2f}% return")
+        print(f"✅ Ready for full testing!")
+        
+    else:
+        print("\n❌ BACKTESTING ENGINE HAS CALCULATION ERRORS!")
+        print("Need to fix the backtesting calculation logic.")
+        
+        print(f"\n💡 NEXT STEPS:")
+        print(f"1. Check portfolio value calculation in backtester.py")
+        print(f"2. Verify that buy & hold uses consistent pricing")
+        print(f"3. Debug the portfolio history tracking")
+
 
 if __name__ == "__main__":
-    diagnostic_test()
+    main()

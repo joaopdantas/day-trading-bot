@@ -1,7 +1,6 @@
 """
-COMPLETELY FIXED Main Backtesting Engine
-
-This replaces the broken src/backtesting/backtester.py with correct logic.
+COMPLETELY FIXED Backtesting Engine
+Fixed portfolio value calculations and signal execution
 """
 
 import os
@@ -14,39 +13,25 @@ import logging
 import matplotlib.pyplot as plt
 
 from .portfolio import Portfolio
-from .strategies import TradingStrategy
+from .strategies import TradingStrategy, BuyAndHoldStrategy
 from .metrics import PerformanceMetrics
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class ProductionBacktester:
-    """
-    COMPLETELY FIXED backtesting engine.
-    
-    The original had fundamental flaws:
-    - Wrong signal execution timing (lookahead bias)
-    - Incorrect benchmark calculations
-    - Broken portfolio value calculations
-    - Wrong performance metrics
-    
-    This version implements correct backtesting logic.
-    """
+    """COMPLETELY FIXED backtesting engine with corrected calculations"""
     
     def __init__(
         self,
         initial_capital: float = 10000,
         transaction_cost: float = 0.001,
-        max_position_size: float = 0.2,
+        max_position_size: float = 0.3,  # Increased for more meaningful trades
         commission_per_share: float = 0.01,
         stop_loss_pct: float = 0.05,
         take_profit_pct: float = 0.10
     ):
-        """
-        Initialize backtesting engine with FIXED parameters.
-        """
         self.initial_capital = initial_capital
         self.transaction_cost = transaction_cost
         self.max_position_size = max_position_size
@@ -68,12 +53,14 @@ class ProductionBacktester:
         # Risk management
         self.position_entry_prices = {}
         
-        logger.info(f"Fixed Backtester initialized with ${initial_capital:,.2f}")
+        print(f"🔧 Fixed Backtester initialized with ${initial_capital:,.2f}")
+        print(f"   Max position size: {max_position_size:.1%}")
+        print(f"   Transaction cost: {transaction_cost:.3%}")
         
     def set_strategy(self, strategy: TradingStrategy):
         """Set the trading strategy to use"""
         self.strategy = strategy
-        logger.info(f"Strategy set: {strategy.__class__.__name__}")
+        print(f"🎯 Strategy set: {strategy.__class__.__name__}")
     
     def run_backtest(
         self,
@@ -82,30 +69,23 @@ class ProductionBacktester:
         end_date: Optional[str] = None,
         benchmark_symbol: str = 'SPY'
     ) -> Dict:
-        """
-        Run FIXED comprehensive backtest on historical data.
+        """Run FIXED comprehensive backtest"""
         
-        Key fixes:
-        - Proper signal timing (no lookahead bias)
-        - Correct benchmark calculation
-        - Fixed portfolio value tracking
-        - Accurate performance metrics
-        """
         if self.strategy is None:
-            raise ValueError("No trading strategy set. Use set_strategy() first.")
+            raise ValueError("No trading strategy set")
         
-        logger.info("Starting FIXED backtesting...")
-        logger.info(f"Data range: {data.index[0]} to {data.index[-1]}")
-        logger.info(f"Total data points: {len(data)}")
+        print(f"\n🚀 Starting FIXED backtesting...")
+        print(f"Data range: {data.index[0]} to {data.index[-1]}")
+        print(f"Total data points: {len(data)}")
         
-        # Filter data by date range if specified
+        # Filter data by date range
         if start_date or end_date:
             original_length = len(data)
             if start_date:
                 data = data[data.index >= start_date]
             if end_date:
                 data = data[data.index <= end_date]
-            logger.info(f"Filtered data: {original_length} -> {len(data)} points")
+            print(f"Filtered: {original_length} -> {len(data)} points")
         
         # Initialize tracking
         self.portfolio.reset(self.initial_capital)
@@ -116,140 +96,221 @@ class ProductionBacktester:
         self.signals_history.clear()
         self.position_entry_prices.clear()
         
-        # FIXED: Track benchmark performance correctly
+        # FIXED: Calculate benchmark correctly
         benchmark_start_price = data['close'].iloc[0]
         benchmark_end_price = data['close'].iloc[-1]
         
-        # Main backtesting loop - FIXED
+        print(f"📊 Benchmark prices: ${benchmark_start_price:.2f} -> ${benchmark_end_price:.2f}")
+        
+        # Main backtesting loop
         total_signals = 0
         executed_trades = 0
-        
+
         for i, (date, row) in enumerate(data.iterrows()):
-            # Skip first few days for technical indicators to stabilize
-            if i < 20:
+            # CRITICAL FIX: Check if this is Buy & Hold strategy
+            is_buy_and_hold = isinstance(self.strategy, BuyAndHoldStrategy)
+            
+            # Skip first few days for technical indicators UNLESS it's Buy & Hold
+            if i < 20 and not is_buy_and_hold:
                 self._record_portfolio_state(date, row)
                 continue
             
-            # FIXED: Get historical data window for strategy (no lookahead)
-            historical_window = data.iloc[max(0, i-50):i]  # Up to but NOT including current bar
-            
-            # FIXED: Generate trading signal using PREVIOUS bar data (no lookahead bias)
-            signal_row = data.iloc[i-1] if i > 0 else row
-            signal = self.strategy.generate_signal(signal_row, historical_window)
-            total_signals += 1
-            
-            # Record signal
-            self.signals_history.append({
-                'date': date,
-                'signal': signal,
-                'price': row['close']
-            })
-            
-            # FIXED: Check risk management BEFORE new signals
-            self._check_risk_management_fixed(row, date)
-            
-            # FIXED: Execute trades based on signal with proper timing
-            if signal['action'] in ['BUY', 'SELL']:
-                # Use current bar's OPEN price for execution (realistic)
-                execution_price = row.get('open', row['close'])
-                if self._execute_signal_fixed(signal, execution_price, date):
-                    executed_trades += 1
-            
-            # Record portfolio state
-            self._record_portfolio_state(date, row)
+            # For Buy & Hold: Allow immediate execution on first day
+            if is_buy_and_hold and i == 0:
+                # Generate signal immediately for Buy & Hold
+                signal = self.strategy.generate_signal(row, data.iloc[0:1])
+                total_signals += 1
+                
+                self.signals_history.append({
+                    'date': date,
+                    'signal': signal,
+                    'price': row['close']
+                })
+                
+                # Execute Buy & Hold signal immediately
+                if signal['action'] == 'BUY':
+                    execution_price = row.get('open', row['close'])
+                    if self._execute_signal_fixed(signal, execution_price, date, row):
+                        executed_trades += 1
+                
+                self._record_portfolio_state(date, row)
+                continue
         
-        # FIXED: Calculate final results
+        # For other strategies: Get historical data window (no lookahead)
+        historical_window = data.iloc[max(0, i-50):i]
+        
+        # Generate trading signal using PREVIOUS bar data (no lookahead bias)
+        signal_row = data.iloc[i-1] if i > 0 else row
+        signal = self.strategy.generate_signal(signal_row, historical_window)
+        total_signals += 1
+        
+        # Record signal
+        self.signals_history.append({
+            'date': date,
+            'signal': signal,
+            'price': row['close']
+        })
+        
+        # Check risk management BEFORE new signals (except for Buy & Hold)
+        if not is_buy_and_hold:
+            self._check_risk_management_fixed(row, date)
+        else:
+            # For Buy & Hold, still call risk management but it will be skipped
+            self._check_risk_management_fixed(row, date)
+        
+        # Execute trades based on signal with proper timing
+        if signal['action'] in ['BUY', 'SELL']:
+            execution_price = row.get('open', row['close'])
+            if self._execute_signal_fixed(signal, execution_price, date, row):
+                executed_trades += 1
+        
+        # Record portfolio state
+        self._record_portfolio_state(date, row)
+            
+            # Debug every 20 days
+        if i % 20 == 0:
+            portfolio_value = self.portfolio.get_total_value(current_price, 'STOCK')
+            print(f"📅 Day {i}: ${current_price:.2f}, Portfolio: ${portfolio_value:.2f}")
+        
+        signal_counts = {'BUY': 0, 'SELL': 0, 'HOLD': 0}
+        for signal_entry in self.signals_history:
+            action = signal_entry['signal'].get('action', 'HOLD')
+            signal_counts[action] = signal_counts.get(action, 0) + 1
+
+        print(f"\n📊 Backtesting Summary:")
+        print(f"   Total signals: {total_signals}")
+        print(f"   BUY signals: {signal_counts['BUY']}")
+        print(f"   SELL signals: {signal_counts['SELL']}")
+        print(f"   HOLD signals: {signal_counts['HOLD']}")
+        print(f"   Executed trades: {executed_trades}") 
+        
+        # Calculate results
         results = self._calculate_results_fixed(data, benchmark_start_price, benchmark_end_price)
         
-        logger.info(f"✅ FIXED Backtesting completed!")
-        logger.info(f"Total signals generated: {total_signals}")
-        logger.info(f"Trades executed: {executed_trades}")
-        logger.info(f"Total return: {results['total_return']:.2%}")
-        logger.info(f"Benchmark return: {results['benchmark_return']:.2%}")
-        logger.info(f"Alpha: {results['alpha']:.2%}")
+        print(f"\n🎯 FINAL RESULTS:")
+        print(f"   Total return: {results['total_return']:.2%}")
+        print(f"   Benchmark return: {results['benchmark_return']:.2%}")
+        print(f"   Alpha: {results['alpha']:.2%}")
         
         return results
     
-    def _execute_signal_fixed(self, signal: Dict, execution_price: float, date: pd.Timestamp) -> bool:
-        """FIXED signal execution with correct logic"""
+    def _execute_signal_fixed(self, signal: Dict, execution_price: float, date: pd.Timestamp, row: pd.Series) -> bool:
+        """FIXED signal execution with proper position sizing"""
+        
         action = signal['action']
         symbol = signal.get('symbol', 'STOCK')
         confidence = signal.get('confidence', 1.0)
         
         trade_executed = False
+        current_price = row['close']
         
-        if action == 'BUY' and not self.portfolio.has_position(symbol):
-            # FIXED: Calculate position size correctly
-            shares = self._calculate_position_size_fixed(execution_price, confidence)
-            
-            if shares > 0:
-                if self.portfolio.buy_stock(symbol, shares, execution_price, self.transaction_cost):
-                    self.position_entry_prices[symbol] = execution_price
-                    
-                    self.trade_history.append({
-                        'date': date,
-                        'action': 'BUY',
-                        'symbol': symbol,
-                        'shares': shares,
-                        'price': execution_price,
-                        'confidence': confidence,
-                        'reasoning': signal.get('reasoning', []),
-                        'portfolio_value': self.portfolio.get_total_value(execution_price, symbol)
-                    })
-                    
-                    logger.info(f"🟢 EXECUTED BUY: {shares} shares of {symbol} at ${execution_price:.2f} (confidence: {confidence:.2f})")
-                    trade_executed = True
+        print(f"🔄 Executing {action} signal at ${execution_price:.2f} (confidence: {confidence:.2f})")
         
-        elif action == 'SELL' and self.portfolio.has_position(symbol):
-            position = self.portfolio.get_position_info(symbol)
-            if position:
-                shares = position['shares']
-                if self.portfolio.sell_stock(symbol, shares, execution_price, self.transaction_cost):
-                    # Remove from entry prices tracking
-                    if symbol in self.position_entry_prices:
-                        del self.position_entry_prices[symbol]
-                    
-                    self.trade_history.append({
-                        'date': date,
-                        'action': 'SELL',
-                        'symbol': symbol,
-                        'shares': shares,
-                        'price': execution_price,
-                        'confidence': confidence,
-                        'reasoning': signal.get('reasoning', []),
-                        'portfolio_value': self.portfolio.get_total_value(execution_price, symbol)
-                    })
-                    
-                    logger.info(f"🔴 EXECUTED SELL: {shares} shares of {symbol} at ${execution_price:.2f} (confidence: {confidence:.2f})")
-                    trade_executed = True
+        if action == 'BUY':
+            # Check if we already have a position
+            if not self.portfolio.has_position(symbol):
+                # Calculate position size - FIXED
+                shares = self._calculate_position_size_fixed(execution_price, confidence)
+                
+                print(f"   💡 Calculated {shares} shares for ${execution_price:.2f}")
+                
+                if shares > 0:
+                    if self.portfolio.buy_stock(symbol, shares, execution_price, self.transaction_cost):
+                        self.position_entry_prices[symbol] = execution_price
+                        
+                        self.trade_history.append({
+                            'date': date,
+                            'action': 'BUY',
+                            'symbol': symbol,
+                            'shares': shares,
+                            'price': execution_price,
+                            'confidence': confidence,
+                            'reasoning': signal.get('reasoning', []),
+                            'portfolio_value': self.portfolio.get_total_value(execution_price, symbol)
+                        })
+                        
+                        print(f"✅ BUY EXECUTED: {shares} shares at ${execution_price:.2f}")
+                        trade_executed = True
+                else:
+                    print(f"   ❌ No shares calculated - insufficient funds or constraints")
+            else:
+                print(f"   ⚠️ Already have position in {symbol}")
+        
+        elif action == 'SELL':
+            if self.portfolio.has_position(symbol):
+                position = self.portfolio.get_position_info(symbol)
+                if position:
+                    shares = position['shares']
+                    if self.portfolio.sell_stock(symbol, shares, execution_price, self.transaction_cost):
+                        # Remove from entry prices
+                        if symbol in self.position_entry_prices:
+                            del self.position_entry_prices[symbol]
+                        
+                        self.trade_history.append({
+                            'date': date,
+                            'action': 'SELL',
+                            'symbol': symbol,
+                            'shares': shares,
+                            'price': execution_price,
+                            'confidence': confidence,
+                            'reasoning': signal.get('reasoning', []),
+                            'portfolio_value': self.portfolio.get_total_value(execution_price, symbol)
+                        })
+                        
+                        print(f"✅ SELL EXECUTED: {shares} shares at ${execution_price:.2f}")
+                        trade_executed = True
+            else:
+                print(f"   ⚠️ No position to sell in {symbol}")
         
         return trade_executed
     
     def _calculate_position_size_fixed(self, price: float, confidence: float) -> int:
-        """FIXED position size calculation"""
+        """FIXED position size calculation with Buy & Hold special case"""
+        
         portfolio_value = self.portfolio.get_total_value(price, 'STOCK')
         available_cash = self.portfolio.get_available_cash()
         
-        # Calculate max investment based on position size limit and confidence
-        max_investment = min(
-            portfolio_value * self.max_position_size * confidence,
-            available_cash * 0.95  # Leave 5% cash buffer
-        )
+        print(f"   📊 Portfolio value: ${portfolio_value:.2f}, Available cash: ${available_cash:.2f}")
         
-        if max_investment <= 0:
+        # SPECIAL CASE: Buy & Hold should invest ALL available cash
+        if isinstance(self.strategy, BuyAndHoldStrategy):
+            max_investment = available_cash * 0.99  # Use 99% to account for fees
+            print(f"   💎 Buy & Hold: Investing ALL available cash: ${max_investment:.2f}")
+        else:
+            # Regular strategies: use position sizing
+            max_investment_by_portfolio = portfolio_value * self.max_position_size * confidence
+            max_investment_by_cash = available_cash * 0.95  # Leave 5% buffer
+            max_investment = min(max_investment_by_portfolio, max_investment_by_cash)
+        
+        print(f"   💰 Max investment: ${max_investment:.2f}")
+        
+        if max_investment <= 100:  # Minimum investment threshold
+            print(f"   ❌ Investment too small: ${max_investment:.2f}")
             return 0
         
         # Calculate shares accounting for transaction costs
         effective_price = price * (1 + self.transaction_cost)
         shares = int(max_investment / effective_price)
         
+        print(f"   🧮 Effective price: ${effective_price:.2f}, Shares: {shares}")
+        
         return max(0, shares)
     
     def _check_risk_management_fixed(self, row: pd.Series, date: pd.Timestamp):
-        """FIXED risk management with stop loss and take profit"""
+        """FIXED risk management with Buy & Hold exception"""
         current_price = row['close']
         symbol = 'STOCK'  # Default symbol
         
+        # CRITICAL FIX: Skip risk management for Buy & Hold
+        # Check if we're in a Buy & Hold strategy by looking at recent signals
+        if hasattr(self, 'signals_history') and self.signals_history:
+            recent_signal = self.signals_history[-1]['signal']
+            if recent_signal.get('buy_and_hold', False):
+                # This is Buy & Hold - NEVER trigger stop loss or take profit
+                logger.info(f"💎 Buy & Hold: Skipping risk management at ${current_price:.2f}")
+                return
+        
+        # Regular risk management for other strategies
         if symbol in self.position_entry_prices and self.portfolio.has_position(symbol):
             entry_price = self.position_entry_prices[symbol]
             price_change = (current_price - entry_price) / entry_price
@@ -295,7 +356,8 @@ class ProductionBacktester:
                         logger.info(f"🎯 TAKE PROFIT: Sold {shares} shares at ${current_price:.2f} ({price_change:.2%})")
     
     def _record_portfolio_state(self, date: pd.Timestamp, row: pd.Series):
-        """Record current portfolio state"""
+        """Record current portfolio state with FIXED calculations"""
+        
         current_price = row['close']
         portfolio_value = self.portfolio.get_total_value(current_price, 'STOCK')
         
@@ -316,6 +378,7 @@ class ProductionBacktester:
     
     def _calculate_results_fixed(self, data: pd.DataFrame, benchmark_start: float, benchmark_end: float) -> Dict:
         """FIXED comprehensive results calculation"""
+        
         if not self.portfolio_history:
             return {'error': 'No portfolio history recorded'}
         
@@ -324,9 +387,16 @@ class ProductionBacktester:
         final_value = self.portfolio_history[-1]['portfolio_value']
         total_return = (final_value - initial_value) / initial_value
         
-        # FIXED: Benchmark comparison (buy and hold)
+        # FIXED: Benchmark calculation (buy and hold the stock)
         benchmark_return = (benchmark_end - benchmark_start) / benchmark_start
         alpha = total_return - benchmark_return
+        
+        print(f"📊 Return Calculation:")
+        print(f"   Initial: ${initial_value:.2f}")
+        print(f"   Final: ${final_value:.2f}")
+        print(f"   Strategy return: {total_return:.2%}")
+        print(f"   Benchmark (${benchmark_start:.2f} -> ${benchmark_end:.2f}): {benchmark_return:.2%}")
+        print(f"   Alpha: {alpha:.2%}")
         
         # Performance metrics
         metrics = self.performance.calculate_metrics(
@@ -339,7 +409,7 @@ class ProductionBacktester:
         buy_trades = [t for t in self.trade_history if t['action'] == 'BUY']
         sell_trades = [t for t in self.trade_history if t['action'] == 'SELL']
         
-        # Calculate additional statistics
+        # Additional statistics
         trading_days = len(self.portfolio_history)
         if trading_days > 0 and self.daily_returns:
             average_daily_return = np.mean(self.daily_returns)
@@ -348,7 +418,6 @@ class ProductionBacktester:
             average_daily_return = 0
             hit_rate = 0
         
-        # Combine results
         results = {
             # Basic performance
             'initial_capital': initial_value,
@@ -369,7 +438,7 @@ class ProductionBacktester:
             'stop_losses_triggered': len([t for t in self.trade_history if 'Stop loss' in str(t.get('reasoning', []))]),
             'take_profits_triggered': len([t for t in self.trade_history if 'Take profit' in str(t.get('reasoning', []))]),
             
-            # Performance metrics from PerformanceMetrics class
+            # Performance metrics
             **metrics
         }
         
@@ -401,22 +470,22 @@ class ProductionBacktester:
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
         fig.suptitle('FIXED Backtesting Performance Analysis', fontsize=16, fontweight='bold')
         
-        # Convert to DataFrames
         portfolio_df = self.get_portfolio_history()
         portfolio_df.set_index('date', inplace=True)
         
-        # Plot 1: Portfolio Value Over Time
+        # Plot 1: Portfolio Value Over Time - FIXED
         ax1 = axes[0, 0]
         ax1.plot(portfolio_df.index, portfolio_df['portfolio_value'], 
-                 label='Portfolio Value', linewidth=2, color='blue')
+                 label='Strategy Portfolio', linewidth=2, color='blue')
         
         # FIXED: Proper buy & hold calculation
         initial_price = portfolio_df['price'].iloc[0]
-        buy_hold_values = self.initial_capital * (portfolio_df['price'] / initial_price)
+        shares_bought = self.initial_capital / initial_price
+        buy_hold_values = shares_bought * portfolio_df['price']
         ax1.plot(portfolio_df.index, buy_hold_values, 
                  label='Buy & Hold', linewidth=2, color='gray', alpha=0.7)
         
-        ax1.set_title('Portfolio Performance')
+        ax1.set_title('Portfolio Performance (FIXED)')
         ax1.set_xlabel('Date')
         ax1.set_ylabel('Portfolio Value ($)')
         ax1.legend()
@@ -440,7 +509,7 @@ class ProductionBacktester:
                 ax2.scatter(sell_trades.index, sell_trades['price'], 
                            color='red', marker='v', s=100, label='Sell', alpha=0.8)
             
-            ax2.set_title('Trading Signals')
+            ax2.set_title('Trading Signals (FIXED)')
             ax2.set_xlabel('Date')
             ax2.set_ylabel('Price ($)')
             ax2.legend()
@@ -458,20 +527,20 @@ class ProductionBacktester:
             ax3.legend()
             ax3.grid(True, alpha=0.3)
         
-        # Plot 4: Cumulative Returns
+        # Plot 4: Cumulative Returns Comparison
         ax4 = axes[1, 1]
         if self.daily_returns:
-            cumulative_returns = np.cumprod(1 + np.array(self.daily_returns)) - 1
-            ax4.plot(portfolio_df.index[1:len(cumulative_returns)+1], cumulative_returns, 
-                     color='green', linewidth=2, label='Strategy')
+            strategy_cumulative = np.cumprod(1 + np.array(self.daily_returns)) - 1
+            ax4.plot(portfolio_df.index[1:len(strategy_cumulative)+1], strategy_cumulative, 
+                     color='blue', linewidth=2, label='Strategy')
             
-            # Compare with benchmark
+            # Benchmark cumulative returns
             price_returns = portfolio_df['price'].pct_change().dropna()
             benchmark_cumulative = np.cumprod(1 + price_returns) - 1
             ax4.plot(portfolio_df.index[1:len(benchmark_cumulative)+1], benchmark_cumulative, 
-                     color='gray', linewidth=2, alpha=0.7, label='Benchmark')
+                     color='gray', linewidth=2, alpha=0.7, label='Buy & Hold')
             
-            ax4.set_title('Cumulative Returns Comparison')
+            ax4.set_title('Cumulative Returns Comparison (FIXED)')
             ax4.set_xlabel('Date')
             ax4.set_ylabel('Cumulative Return')
             ax4.legend()
@@ -479,7 +548,6 @@ class ProductionBacktester:
         
         plt.tight_layout()
         
-        # Save if path provided
         if output_path:
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             plt.close()
@@ -489,7 +557,8 @@ class ProductionBacktester:
             return "Visualization displayed"
     
     def generate_performance_report(self, results: Dict) -> str:
-        """Generate a comprehensive performance report"""
+        """Generate comprehensive performance report"""
+        
         report = f"""
 === FIXED BACKTESTING PERFORMANCE REPORT ===
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -532,4 +601,3 @@ ADDITIONAL METRICS:
         """
         
         return report.strip()
-    

@@ -1,6 +1,5 @@
 """
-FIXED strategies.py - Update existing file with correct logic
-Keep the same class names to avoid import errors
+FINAL FIXED strategies.py - Correcting Buy & Hold and Signal Logic
 """
 
 import numpy as np
@@ -26,18 +25,14 @@ class TradingStrategy(ABC):
 
 
 class MLTradingStrategy(TradingStrategy):
-    """
-    FIXED ML Trading Strategy with CORRECT signal logic
-    
-    Original had inverted logic - this version implements proper buy low, sell high
-    """
+    """FIXED ML Trading Strategy with CORRECT signal logic"""
     
     def __init__(
         self,
-        rsi_oversold: float = 30,      # Buy when RSI < 30 (stock is CHEAP)
-        rsi_overbought: float = 70,    # Sell when RSI > 70 (stock is EXPENSIVE)
-        volume_threshold: float = 1.0, # Require average volume or higher
-        confidence_threshold: float = 0.25,  # MUCH lower threshold
+        rsi_oversold: float = 30,
+        rsi_overbought: float = 70,
+        volume_threshold: float = 1.0,
+        confidence_threshold: float = 0.25,
         use_ml_predictions: bool = False
     ):
         """Initialize with CORRECT parameters"""
@@ -52,7 +47,6 @@ class MLTradingStrategy(TradingStrategy):
         self.position = None
         self.signal_count = 0
         
-        # Debug logging
         logger.info(f"MLTradingStrategy initialized with:")
         logger.info(f"  RSI oversold: {rsi_oversold} (BUY when below)")
         logger.info(f"  RSI overbought: {rsi_overbought} (SELL when above)")
@@ -65,9 +59,8 @@ class MLTradingStrategy(TradingStrategy):
         self.signal_count = 0
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """
-        Generate CORRECT trading signals - Buy LOW, Sell HIGH
-        """
+        """Generate CORRECT trading signals - Buy LOW, Sell HIGH"""
+        
         signal = {
             'action': 'HOLD',
             'confidence': 0.0,
@@ -81,7 +74,6 @@ class MLTradingStrategy(TradingStrategy):
             sell_score = 0.0
             reasoning = []
             
-            # Get current price for context
             current_price = current_data.get('close', 0)
             
             # RSI Analysis - FIXED LOGIC
@@ -100,58 +92,57 @@ class MLTradingStrategy(TradingStrategy):
                     sell_score += 1.5
                     reasoning.append(f'RSI above 60 ({rsi:.1f}) - Stock expensive, SELL signal')
             
-            # MACD Analysis - FIXED LOGIC
+            # MACD Analysis
             macd = current_data.get('macd', 0)
             macd_signal = current_data.get('macd_signal', 0)
             if pd.notna(macd) and pd.notna(macd_signal):
-                if macd > macd_signal:  # Bullish momentum
+                if macd > macd_signal:
                     buy_score += 1.0
                     reasoning.append('MACD bullish - upward momentum')
-                else:  # Bearish momentum
+                else:
                     sell_score += 1.0
                     reasoning.append('MACD bearish - downward momentum')
             
-            # Bollinger Bands - FIXED LOGIC
+            # Bollinger Bands
             bb_position = current_data.get('bb_position', 0.5)
             if pd.notna(bb_position):
                 if bb_position <= 0.1:  # Near lower band = CHEAP
                     buy_score += 2.0
                     reasoning.append('Near lower Bollinger Band - very cheap')
-                elif bb_position <= 0.3:  # Below middle = somewhat cheap
+                elif bb_position <= 0.3:
                     buy_score += 1.0
                     reasoning.append('Below Bollinger Band middle - cheap')
                 elif bb_position >= 0.9:  # Near upper band = EXPENSIVE
                     sell_score += 2.0
                     reasoning.append('Near upper Bollinger Band - very expensive')
-                elif bb_position >= 0.7:  # Above middle = somewhat expensive
+                elif bb_position >= 0.7:
                     sell_score += 1.0
                     reasoning.append('Above Bollinger Band middle - expensive')
             
-            # Support/Resistance - FIXED LOGIC
+            # Support/Resistance
             at_support = current_data.get('at_support', 0)
             at_resistance = current_data.get('at_resistance', 0)
-            if at_support:  # At support = BUY opportunity
+            if at_support:
                 buy_score += 2.0
                 reasoning.append('At support level - BUY opportunity')
-            if at_resistance:  # At resistance = SELL opportunity
+            if at_resistance:
                 sell_score += 2.0
                 reasoning.append('At resistance level - SELL opportunity')
             
-            # Moving Average Position - FIXED LOGIC
+            # Moving Average Position
             sma_20 = current_data.get('sma_20', 0)
             sma_50 = current_data.get('sma_50', 0)
             if pd.notna(sma_20) and pd.notna(sma_50) and current_price > 0:
-                if current_price < sma_20 and sma_20 < sma_50:  # Price below both = CHEAP
+                if current_price < sma_20 and sma_20 < sma_50:
                     buy_score += 1.5
                     reasoning.append('Price below moving averages - undervalued')
-                elif current_price > sma_20 and sma_20 > sma_50:  # Price above both = EXPENSIVE
+                elif current_price > sma_20 and sma_20 > sma_50:
                     sell_score += 1.5
                     reasoning.append('Price above moving averages - overvalued')
             
             # Volume Confirmation
             volume_ratio = current_data.get('volume_ratio', 1.0)
             if pd.notna(volume_ratio) and volume_ratio >= self.volume_threshold:
-                # Volume confirms the signal
                 if buy_score > sell_score:
                     buy_score += 0.5
                     reasoning.append(f'Volume confirms BUY ({volume_ratio:.1f}x avg)')
@@ -180,7 +171,6 @@ class MLTradingStrategy(TradingStrategy):
                 logger.info(f"🔴 SELL signal generated at ${current_price:.2f} - "
                            f"Score: {sell_score:.1f}, Confidence: {confidence:.2f}")
             
-            # Update state
             self.signal_count += 1
             self.last_signal = signal['action']
             
@@ -192,9 +182,7 @@ class MLTradingStrategy(TradingStrategy):
 
 
 class TechnicalAnalysisStrategy(TradingStrategy):
-    """
-    FIXED Technical Analysis Strategy - Proper buy low, sell high logic
-    """
+    """FIXED Technical Analysis Strategy"""
     
     def __init__(
         self,
@@ -204,23 +192,19 @@ class TechnicalAnalysisStrategy(TradingStrategy):
         rsi_oversold: float = 30,
         rsi_overbought: float = 70
     ):
-        """Initialize with correct parameters"""
         self.sma_short = sma_short
         self.sma_long = sma_long
         self.rsi_period = rsi_period
         self.rsi_oversold = rsi_oversold
         self.rsi_overbought = rsi_overbought
-        
         self.position = None
+        
         logger.info(f"TechnicalAnalysisStrategy initialized: RSI {rsi_oversold}/{rsi_overbought}")
     
     def reset(self):
-        """Reset strategy state"""
         self.position = None
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """Generate CORRECT technical signals"""
-        
         signal = {
             'action': 'HOLD',
             'confidence': 0.6,
@@ -229,48 +213,46 @@ class TechnicalAnalysisStrategy(TradingStrategy):
         }
         
         try:
-            # Get current values
             sma_short = current_data.get(f'sma_{self.sma_short}', 0)
             sma_long = current_data.get(f'sma_{self.sma_long}', 0)
             price = current_data.get('close', 0)
             rsi = current_data.get('rsi', 50)
             
-            # FIXED LOGIC: Strong RSI signals first
-            if rsi <= self.rsi_oversold:  # Very cheap - STRONG BUY
+            # Strong RSI signals first
+            if rsi <= self.rsi_oversold:
                 signal['action'] = 'BUY'
                 signal['confidence'] = 0.9
                 signal['reasoning'].append(f'RSI oversold ({rsi:.1f}) - Stock very cheap, strong BUY')
                 logger.info(f"🟢 STRONG BUY: RSI {rsi:.1f} <= {self.rsi_oversold} at ${price:.2f}")
                 
-            elif rsi >= self.rsi_overbought:  # Very expensive - STRONG SELL
+            elif rsi >= self.rsi_overbought:
                 signal['action'] = 'SELL'
                 signal['confidence'] = 0.9
                 signal['reasoning'].append(f'RSI overbought ({rsi:.1f}) - Stock very expensive, strong SELL')
                 logger.info(f"🔴 STRONG SELL: RSI {rsi:.1f} >= {self.rsi_overbought} at ${price:.2f}")
             
-            # Moving Average signals - FIXED LOGIC
+            # Moving Average signals
             elif pd.notna(sma_short) and pd.notna(sma_long) and sma_short > 0 and sma_long > 0:
-                
-                if price < sma_short < sma_long and rsi < 50:  # Price below MAs + not overbought = CHEAP
+                if price < sma_short < sma_long and rsi < 50:
                     signal['action'] = 'BUY'
                     signal['confidence'] = 0.7
                     signal['reasoning'].append(f'Price (${price:.2f}) below SMAs, RSI {rsi:.1f} - Value opportunity')
                     logger.info(f"🟢 BUY: Price below SMAs, RSI {rsi:.1f}")
                     
-                elif price > sma_short > sma_long and rsi > 50:  # Price above MAs + not oversold = EXPENSIVE
+                elif price > sma_short > sma_long and rsi > 50:
                     signal['action'] = 'SELL'
                     signal['confidence'] = 0.7
                     signal['reasoning'].append(f'Price (${price:.2f}) above SMAs, RSI {rsi:.1f} - Taking profits')
                     logger.info(f"🔴 SELL: Price above SMAs, RSI {rsi:.1f}")
             
             # Moderate RSI signals
-            elif rsi < 40:  # Somewhat cheap
+            elif rsi < 40:
                 signal['action'] = 'BUY'
                 signal['confidence'] = 0.6
                 signal['reasoning'].append(f'RSI {rsi:.1f} below 40 - Moderate buy signal')
                 logger.info(f"🟢 BUY: RSI {rsi:.1f} < 40")
                 
-            elif rsi > 60:  # Somewhat expensive
+            elif rsi > 60:
                 signal['action'] = 'SELL'
                 signal['confidence'] = 0.6
                 signal['reasoning'].append(f'RSI {rsi:.1f} above 60 - Moderate sell signal')
@@ -286,76 +268,91 @@ class TechnicalAnalysisStrategy(TradingStrategy):
         return signal
 
 
+"""
+TRUE BUY & HOLD FIX - Replace the BuyAndHoldStrategy class in strategies.py
+
+The problem: Buy & Hold was subject to stop losses and wrong entry timing.
+The solution: Make it immune to all backtesting rules.
+"""
+
 class BuyAndHoldStrategy(TradingStrategy):
     """
-    FIXED Buy and Hold Strategy - Buy once and hold forever
+    TRUE Buy and Hold Strategy - Immune to all backtesting rules
+    
+    This strategy should:
+    1. Buy on the VERY FIRST day at opening price
+    2. NEVER sell (ignore stop losses, take profits, etc.)
+    3. Hold until the very end
     """
     
     def __init__(self):
-        """Initialize strategy"""
         self.has_bought = False
         self.buy_price = 0
+        self.is_first_call = True  # Track if this is the very first call
     
     def reset(self):
         """Reset strategy state"""
         self.has_bought = False
         self.buy_price = 0
+        self.is_first_call = True
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """Buy once at the beginning and hold"""
+        """
+        TRUE Buy and Hold Logic:
+        - Buy ONLY on the first call ever
+        - NEVER sell after that, no matter what
+        """
         
         current_price = current_data.get('close', 0)
         
-        if not self.has_bought:
+        # Buy ONLY on the very first call
+        if self.is_first_call:
+            self.is_first_call = False
             self.has_bought = True
             self.buy_price = current_price
-            logger.info(f"🟢 BUY AND HOLD: Initial purchase at ${current_price:.2f}")
+            
+            logger.info(f"🟢 TRUE BUY AND HOLD: Buying at ${current_price:.2f} on FIRST day")
             
             return {
                 'action': 'BUY',
                 'confidence': 1.0,
                 'symbol': 'STOCK',
-                'reasoning': [f'Buy and hold - initial purchase at ${current_price:.2f}']
+                'reasoning': [f'Buy and hold - purchasing at first data point: ${current_price:.2f}'],
+                'ignore_stop_loss': True,  # Special flag to ignore risk management
+                'ignore_take_profit': True,  # Special flag to ignore risk management
+                'buy_and_hold': True  # Special flag for the backtester
             }
         
-        # Calculate unrealized return
+        # ALL subsequent calls: ALWAYS hold, never sell
         unrealized_return = ((current_price - self.buy_price) / self.buy_price * 100) if self.buy_price > 0 else 0
         
         return {
-            'action': 'HOLD',
+            'action': 'HOLD',  # NEVER sell
             'confidence': 1.0,
             'symbol': 'STOCK',
-            'reasoning': [f'Holding since ${self.buy_price:.2f}, current: ${current_price:.2f} ({unrealized_return:+.1f}%)']
+            'reasoning': [f'TRUE HOLD: Bought at ${self.buy_price:.2f}, now ${current_price:.2f} ({unrealized_return:+.1f}%)'],
+            'ignore_stop_loss': True,  # Ignore stop losses
+            'ignore_take_profit': True,  # Ignore take profits
+            'buy_and_hold': True  # Flag for backtester
         }
 
 
 class MeanReversionStrategy(TradingStrategy):
-    """Mean reversion strategy using Bollinger Bands - FIXED"""
+    """Mean reversion strategy using Bollinger Bands"""
     
-    def __init__(
-        self,
-        bb_period: int = 20,
-        bb_std: float = 2.0,
-        rsi_period: int = 14,
-        hold_period: int = 5
-    ):
-        """Initialize mean reversion strategy"""
+    def __init__(self, bb_period: int = 20, bb_std: float = 2.0, rsi_period: int = 14, hold_period: int = 5):
         self.bb_period = bb_period
         self.bb_std = bb_std
         self.rsi_period = rsi_period
         self.hold_period = hold_period
-        
         self.position = None
         self.hold_counter = 0
     
     def reset(self):
-        """Reset strategy state"""
         self.position = None
         self.hold_counter = 0
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """Generate mean reversion signals - FIXED LOGIC"""
-        
         signal = {
             'action': 'HOLD',
             'confidence': 0.5,
@@ -368,12 +365,11 @@ class MeanReversionStrategy(TradingStrategy):
             rsi = current_data.get('rsi', 50)
             price = current_data.get('close', 0)
             
-            # Update hold counter
             if self.position:
                 self.hold_counter += 1
             
-            # FIXED: Buy when cheap (low BB position + low RSI)
-            if bb_position < 0.1 and rsi < 35:  # Very oversold
+            # Buy when very oversold
+            if bb_position < 0.1 and rsi < 35:
                 if not self.position:
                     signal['action'] = 'BUY'
                     signal['confidence'] = 0.8
@@ -382,8 +378,8 @@ class MeanReversionStrategy(TradingStrategy):
                     self.hold_counter = 0
                     logger.info(f"🟢 MEAN REVERSION BUY at ${price:.2f} (BB: {bb_position:.2f}, RSI: {rsi:.1f})")
             
-            # FIXED: Sell when expensive (high BB position + high RSI)
-            elif bb_position > 0.9 and rsi > 65:  # Very overbought
+            # Sell when very overbought
+            elif bb_position > 0.9 and rsi > 65:
                 if self.position == 'LONG':
                     signal['action'] = 'SELL'
                     signal['confidence'] = 0.8
@@ -392,9 +388,9 @@ class MeanReversionStrategy(TradingStrategy):
                     self.hold_counter = 0
                     logger.info(f"🔴 MEAN REVERSION SELL at ${price:.2f} (BB: {bb_position:.2f}, RSI: {rsi:.1f})")
             
-            # Exit conditions - take profits when moving back to middle
+            # Exit conditions
             elif self.position and self.hold_counter >= self.hold_period:
-                if self.position == 'LONG' and bb_position > 0.6:  # Moved up from oversold
+                if self.position == 'LONG' and bb_position > 0.6:
                     signal['action'] = 'SELL'
                     signal['confidence'] = 0.7
                     signal['reasoning'].append('Mean reversion exit: moved away from oversold')
@@ -413,28 +409,18 @@ class MeanReversionStrategy(TradingStrategy):
 
 
 class MomentumStrategy(TradingStrategy):
-    """Momentum strategy - FIXED"""
+    """Momentum strategy"""
     
-    def __init__(
-        self,
-        lookback_period: int = 20,
-        breakout_threshold: float = 0.02,
-        volume_confirmation: bool = True
-    ):
-        """Initialize momentum strategy"""
+    def __init__(self, lookback_period: int = 20, breakout_threshold: float = 0.02, volume_confirmation: bool = True):
         self.lookback_period = lookback_period
         self.breakout_threshold = breakout_threshold
         self.volume_confirmation = volume_confirmation
-        
         self.position = None
     
     def reset(self):
-        """Reset strategy state"""
         self.position = None
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """Generate momentum signals - FIXED"""
-        
         signal = {
             'action': 'HOLD',
             'confidence': 0.5,
@@ -447,20 +433,18 @@ class MomentumStrategy(TradingStrategy):
                 signal['reasoning'].append('Insufficient data for momentum')
                 return signal
             
-            # Calculate momentum
             recent_data = historical_data.tail(self.lookback_period)
             current_price = current_data['close']
             start_price = recent_data['close'].iloc[0]
             price_change = (current_price - start_price) / start_price
             
-            # Volume confirmation
             volume_confirmed = True
             if self.volume_confirmation:
                 avg_volume = recent_data['volume'].mean()
                 current_volume = current_data.get('volume', avg_volume)
                 volume_confirmed = current_volume > avg_volume * 1.2
             
-            # FIXED: Buy on upward breakouts, sell on downward breakouts
+            # Buy on upward breakouts
             if price_change > self.breakout_threshold and volume_confirmed:
                 if not self.position:
                     signal['action'] = 'BUY'
@@ -469,6 +453,7 @@ class MomentumStrategy(TradingStrategy):
                     self.position = 'LONG'
                     logger.info(f"🟢 MOMENTUM BUY: {price_change:.2%} breakout at ${current_price:.2f}")
             
+            # Sell on downward breakouts
             elif price_change < -self.breakout_threshold and volume_confirmed:
                 if self.position == 'LONG':
                     signal['action'] = 'SELL'
@@ -485,4 +470,3 @@ class MomentumStrategy(TradingStrategy):
             signal['reasoning'].append(f'Error: {str(e)}')
         
         return signal
-    
