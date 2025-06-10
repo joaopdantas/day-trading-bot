@@ -59,8 +59,9 @@ class MLTradingStrategy(TradingStrategy):
         self.signal_count = 0
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        """Generate CORRECT trading signals - Buy LOW, Sell HIGH"""
-        
+        """
+        Generate BALANCED trading signals - Both BUY and SELL
+        """
         signal = {
             'action': 'HOLD',
             'confidence': 0.0,
@@ -74,102 +75,130 @@ class MLTradingStrategy(TradingStrategy):
             sell_score = 0.0
             reasoning = []
             
+            # Get current market data
             current_price = current_data.get('close', 0)
+            if current_price <= 0:
+                return signal
             
-            # RSI Analysis - FIXED LOGIC
+            # RSI Analysis - BALANCED APPROACH
             rsi = current_data.get('rsi', 50)
             if pd.notna(rsi):
-                if rsi <= self.rsi_oversold:  # VERY CHEAP - Strong BUY
+                # Strong signals at extremes
+                if rsi <= 30:  # Very oversold = Strong BUY
+                    buy_score += 5.0
+                    reasoning.append(f'RSI very oversold ({rsi:.1f}) - Strong BUY')
+                    
+                elif rsi <= 40:  # Moderately oversold = BUY
                     buy_score += 3.0
-                    reasoning.append(f'RSI oversold ({rsi:.1f}) - Stock very cheap, strong BUY')
-                elif rsi < 40:  # Somewhat cheap
-                    buy_score += 1.5
-                    reasoning.append(f'RSI below 40 ({rsi:.1f}) - Stock cheap, BUY signal')
-                elif rsi >= self.rsi_overbought:  # VERY EXPENSIVE - Strong SELL
+                    reasoning.append(f'RSI oversold ({rsi:.1f}) - BUY signal')
+                    
+                elif rsi >= 70:  # Very overbought = Strong SELL  
+                    sell_score += 5.0
+                    reasoning.append(f'RSI very overbought ({rsi:.1f}) - Strong SELL')
+                    
+                elif rsi >= 60:  # Moderately overbought = SELL
                     sell_score += 3.0
-                    reasoning.append(f'RSI overbought ({rsi:.1f}) - Stock very expensive, strong SELL')
-                elif rsi > 60:  # Somewhat expensive
-                    sell_score += 1.5
-                    reasoning.append(f'RSI above 60 ({rsi:.1f}) - Stock expensive, SELL signal')
+                    reasoning.append(f'RSI overbought ({rsi:.1f}) - SELL signal')
+                    
+                # NEUTRAL ZONE - This is key for balance!
+                elif 45 <= rsi <= 55:  # Neutral zone
+                    # Look at price momentum for direction
+                    if len(historical_data) >= 5:
+                        recent_prices = historical_data['close'].tail(5)
+                        price_change = (current_price - recent_prices.iloc[0]) / recent_prices.iloc[0]
+                        
+                        if price_change > 0.02:  # Rising > 2%
+                            sell_score += 1.5
+                            reasoning.append(f'Neutral RSI but rising momentum - SELL signal')
+                        elif price_change < -0.02:  # Falling > 2%
+                            buy_score += 1.5
+                            reasoning.append(f'Neutral RSI but falling momentum - BUY signal')
+                        else:
+                            # Very neutral - look at RSI direction
+                            if rsi < 50:
+                                buy_score += 1.0
+                                reasoning.append(f'Neutral RSI ({rsi:.1f}) slightly bearish - Weak BUY')
+                            else:
+                                sell_score += 1.0
+                                reasoning.append(f'Neutral RSI ({rsi:.1f}) slightly bullish - Weak SELL')
+                                
+                elif 40 < rsi < 45:  # Leaning oversold
+                    buy_score += 2.0
+                    reasoning.append(f'RSI leaning oversold ({rsi:.1f}) - BUY signal')
+                    
+                elif 55 < rsi < 60:  # Leaning overbought
+                    sell_score += 2.0
+                    reasoning.append(f'RSI leaning overbought ({rsi:.1f}) - SELL signal')
             
-            # MACD Analysis
+            # MACD for additional confirmation
             macd = current_data.get('macd', 0)
             macd_signal = current_data.get('macd_signal', 0)
             if pd.notna(macd) and pd.notna(macd_signal):
-                if macd > macd_signal:
-                    buy_score += 1.0
-                    reasoning.append('MACD bullish - upward momentum')
-                else:
-                    sell_score += 1.0
-                    reasoning.append('MACD bearish - downward momentum')
-            
-            # Bollinger Bands
-            bb_position = current_data.get('bb_position', 0.5)
-            if pd.notna(bb_position):
-                if bb_position <= 0.1:  # Near lower band = CHEAP
-                    buy_score += 2.0
-                    reasoning.append('Near lower Bollinger Band - very cheap')
-                elif bb_position <= 0.3:
-                    buy_score += 1.0
-                    reasoning.append('Below Bollinger Band middle - cheap')
-                elif bb_position >= 0.9:  # Near upper band = EXPENSIVE
-                    sell_score += 2.0
-                    reasoning.append('Near upper Bollinger Band - very expensive')
-                elif bb_position >= 0.7:
-                    sell_score += 1.0
-                    reasoning.append('Above Bollinger Band middle - expensive')
-            
-            # Support/Resistance
-            at_support = current_data.get('at_support', 0)
-            at_resistance = current_data.get('at_resistance', 0)
-            if at_support:
-                buy_score += 2.0
-                reasoning.append('At support level - BUY opportunity')
-            if at_resistance:
-                sell_score += 2.0
-                reasoning.append('At resistance level - SELL opportunity')
-            
-            # Moving Average Position
-            sma_20 = current_data.get('sma_20', 0)
-            sma_50 = current_data.get('sma_50', 0)
-            if pd.notna(sma_20) and pd.notna(sma_50) and current_price > 0:
-                if current_price < sma_20 and sma_20 < sma_50:
+                macd_diff = macd - macd_signal
+                if macd_diff > 0.1:  # Strong bullish MACD
                     buy_score += 1.5
-                    reasoning.append('Price below moving averages - undervalued')
-                elif current_price > sma_20 and sma_20 > sma_50:
+                    reasoning.append('Strong bullish MACD - BUY confirmation')
+                elif macd_diff < -0.1:  # Strong bearish MACD
                     sell_score += 1.5
-                    reasoning.append('Price above moving averages - overvalued')
+                    reasoning.append('Strong bearish MACD - SELL confirmation')
+                elif macd_diff > 0:  # Weak bullish
+                    buy_score += 0.5
+                    reasoning.append('Weak bullish MACD')
+                else:  # Weak bearish
+                    sell_score += 0.5
+                    reasoning.append('Weak bearish MACD')
             
-            # Volume Confirmation
+            # Price trend analysis
+            if len(historical_data) >= 10:
+                sma_10 = historical_data['close'].tail(10).mean()
+                if current_price > sma_10 * 1.02:  # 2% above SMA
+                    sell_score += 1.0
+                    reasoning.append('Price well above short-term average - SELL signal')
+                elif current_price < sma_10 * 0.98:  # 2% below SMA
+                    buy_score += 1.0
+                    reasoning.append('Price well below short-term average - BUY signal')
+            
+            # Volume confirmation (but don't let it dominate)
             volume_ratio = current_data.get('volume_ratio', 1.0)
             if pd.notna(volume_ratio) and volume_ratio >= self.volume_threshold:
                 if buy_score > sell_score:
                     buy_score += 0.5
-                    reasoning.append(f'Volume confirms BUY ({volume_ratio:.1f}x avg)')
+                    reasoning.append(f'Volume confirms BUY')
                 elif sell_score > buy_score:
                     sell_score += 0.5
-                    reasoning.append(f'Volume confirms SELL ({volume_ratio:.1f}x avg)')
+                    reasoning.append(f'Volume confirms SELL')
             
-            # Calculate final signal
-            if buy_score > sell_score and buy_score >= self.confidence_threshold:
+            # CRITICAL: Ensure we can generate both BUY and SELL signals
+            # by using proper scoring thresholds
+            min_signal_score = 1.0  # Minimum score to generate signal
+            
+            if buy_score >= min_signal_score and buy_score > sell_score:
                 confidence = min(buy_score / 5.0, 1.0)
-                signal['action'] = 'BUY'
-                signal['confidence'] = confidence
-                signal['reasoning'] = reasoning
-                signal['technical_score'] = buy_score
                 
-                logger.info(f"🟢 BUY signal generated at ${current_price:.2f} - "
-                           f"Score: {buy_score:.1f}, Confidence: {confidence:.2f}")
-                
-            elif sell_score > buy_score and sell_score >= self.confidence_threshold:
+                if confidence >= self.confidence_threshold:
+                    signal['action'] = 'BUY'
+                    signal['confidence'] = confidence
+                    signal['reasoning'] = reasoning
+                    signal['technical_score'] = buy_score
+                    
+                    logger.info(f"🟢 BUY signal generated at ${current_price:.2f} - "
+                            f"Score: {buy_score:.1f}, Confidence: {confidence:.2f}")
+            
+            elif sell_score >= min_signal_score and sell_score > buy_score:
                 confidence = min(sell_score / 5.0, 1.0)
-                signal['action'] = 'SELL'
-                signal['confidence'] = confidence
-                signal['reasoning'] = reasoning
-                signal['technical_score'] = sell_score
                 
-                logger.info(f"🔴 SELL signal generated at ${current_price:.2f} - "
-                           f"Score: {sell_score:.1f}, Confidence: {confidence:.2f}")
+                if confidence >= self.confidence_threshold:
+                    signal['action'] = 'SELL'
+                    signal['confidence'] = confidence
+                    signal['reasoning'] = reasoning
+                    signal['technical_score'] = sell_score
+                    
+                    logger.info(f"🔴 SELL signal generated at ${current_price:.2f} - "
+                            f"Score: {sell_score:.1f}, Confidence: {confidence:.2f}")
+            
+            # DEBUG logging to understand balance
+            else:
+                logger.debug(f"HOLD at ${current_price:.2f} - BUY:{buy_score:.1f}, SELL:{sell_score:.1f}, RSI:{rsi:.1f}")
             
             self.signal_count += 1
             self.last_signal = signal['action']

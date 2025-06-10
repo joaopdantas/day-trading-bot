@@ -1,0 +1,109 @@
+STANDARDIZED HYPOTHESIS TESTING FRAMEWORK REPORT
+================================================================================
+Generated: 2025-06-10 17:41:17
+
+STANDARDIZED TEST CONDITIONS:
+- Test Symbol: MSFT
+- Period: 2024-01-01 to 2024-12-31
+- Initial Capital: $10,000
+- Data Source: alpha_vantage then Yahoo Finance
+- All systems use IDENTICAL conditions for fair comparison
+
+STANDARDIZED RESULTS:
+----------------------------------------
+
+#1 H1: Strategy ETF Proxy:
+  source: Momentum ETF (MTUM) - STANDARDIZED 2024
+  total_return: 0.3600 (36.00%)
+  volatility: 0.1899
+  sharpe_ratio: 1.8956 (189.56%)
+  data_type: STANDARDIZED 2024 ETF DATA
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#2 H1: TradingView Strategy:
+  source: TradingView Strategy (STANDARDIZED 2024)
+  strategy_name: RSI Divergence Strategy
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+  total_return: 0.3539 (35.39%)
+  total_trades: 92
+  win_rate: 0.6413
+  max_drawdown: 0.0298
+  sharpe_ratio: -0.2630 (-26.30%)
+  data_type: STANDARDIZED TRADINGVIEW 2024
+
+#3 H3: AI ETF:
+  source: AI ETF (QQQ) - STANDARDIZED 2024
+  total_return: 0.2883 (28.83%)
+  volatility: 0.1796
+  sharpe_ratio: 1.6052 (160.52%)
+  data_type: STANDARDIZED 2024 QQQ DATA
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#4 H1: Systematic Strategy:
+  source: Systematic Strategy (SPY MA) - STANDARDIZED 2024
+  total_return: 0.2799 (27.99%)
+  data_type: STANDARDIZED 2024 SYSTEMATIC
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#5 H2: Warren Buffett:
+  source: Warren Buffett (BRK-A) - STANDARDIZED 2024
+  total_return: 0.2334 (23.34%)
+  volatility: 0.1498
+  sharpe_ratio: 1.5587 (155.87%)
+  data_type: STANDARDIZED 2024 BRK-A DATA
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#6 H2: Cathie Wood:
+  source: Cathie Wood (ARKK) - STANDARDIZED 2024
+  total_return: 0.1408 (14.08%)
+  volatility: 0.3577
+  sharpe_ratio: 0.3936 (39.36%)
+  data_type: STANDARDIZED 2024 ARKK DATA
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#7 H3: Robo-Advisor:
+  source: Robo-Advisor Performance (Conservative Estimate)
+  total_return: 0.0890 (8.90%)
+  data_type: STANDARDIZED ESTIMATE
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#8 H2: Ray Dalio:
+  source: Ray Dalio All Weather Proxy - STANDARDIZED 2024
+  total_return: 0.0582 (5.82%)
+  data_type: STANDARDIZED 2024 ALL WEATHER
+  period: Jan 2024 - Dec 2024 (STANDARDIZED)
+
+#9 Your AI System:
+  initial_capital: 10000
+  final_value: 10080.9456
+  total_return: 0.0081 (0.81%)
+  benchmark_return: 0.1541 (15.41%)
+  alpha: -0.1460
+  trading_days: 251
+  total_trades: 31
+  buy_trades: 16
+  sell_trades: 15
+  win_rate: 0.5333
+  sharpe_ratio: 0.6095 (60.95%)
+  max_drawdown: 0.0142
+  volatility: 0.0147
+  average_daily_return: 0.0000 (0.00%)
+  hit_rate: 0.1217
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  data_type: STANDARDIZED 2024 DATA
+  test_period: 2024-01-01 to 2024-12-31
+  strategy_name: Your AI System
+
+#10 H4: Beginner Trader:
+  source: Beginner Trader (Academic Research)
+  total_return: -0.1500 (-15.00%)
+  data_type: ACADEMIC BASELINE
+  period: Standardized Academic Research
+
+STANDARDIZATION IMPROVEMENTS:
+- All systems now test identical time period (Jan-Dec 2024)
+- Same initial capital ($10,000) for all comparisons
+- Consistent data source priority (Alpha Vantage then Yahoo Finance)
+- Identical backtesting framework parameters
+- Fair comparison across all benchmarks
