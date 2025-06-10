@@ -19,9 +19,10 @@ class MarketDataExtractor {
   private isInitialized: boolean = false;
   private apiEndpoints = {
     alpha_vantage: "https://www.alphavantage.co/query",
-    yahoo_finance: "https://query1.finance.yahoo.com/v8/finance/chart"
+    yahoo_finance: "https://query1.finance.yahoo.com/v8/finance/chart",
   };
-  private cache: Map<string, { data: MarketData; timestamp: number }> = new Map();
+  private cache: Map<string, { data: MarketData; timestamp: number }> =
+    new Map();
 
   constructor() {
     this.observer = new MutationObserver(this.handleDOMChanges.bind(this));
@@ -43,17 +44,43 @@ class MarketDataExtractor {
 
       if (request.type === "GET_MARKET_DATA") {
         console.log("Extracting market data on demand:", request.data);
+
+        // Set a timeout for the entire request
+        const timeout = setTimeout(() => {
+          sendResponse({
+            error: "Response timeout - request took too long to complete",
+          });
+        }, 45000);
+
         (async () => {
           try {
             const data = request.data;
             if (!data || !data.symbol || !data.source) {
-              sendResponse({ error: "Invalid request: missing symbol or data source" });
+              clearTimeout(timeout);
+              sendResponse({
+                error: "Invalid request: missing symbol or data source",
+              });
               return;
             }
-            await this.fetchMarketData(data, sendResponse);
+            await this.fetchMarketData(data, (response) => {
+              clearTimeout(timeout);
+              if (!response) {
+                sendResponse({
+                  error: "No response received from data service",
+                });
+                return;
+              }
+              sendResponse(response);
+            });
           } catch (error) {
+            clearTimeout(timeout);
             console.error("Error in GET_MARKET_DATA handler:", error);
-            sendResponse({ error: error instanceof Error ? error.message : "Failed to fetch market data" });
+            sendResponse({
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to fetch market data",
+            });
           }
         })();
         return true;
@@ -65,14 +92,23 @@ class MarketDataExtractor {
           try {
             const data = request.data;
             if (!data || !data.source || !data.apiKey) {
-              sendResponse({ isValid: false, error: "Invalid request: missing source or API key" });
+              sendResponse({
+                isValid: false,
+                error: "Invalid request: missing source or API key",
+              });
               return;
             }
             const isValid = await this.validateApiKey(data.source, data.apiKey);
             sendResponse({ isValid });
           } catch (error) {
             console.error("Error in VALIDATE_API_KEY handler:", error);
-            sendResponse({ isValid: false, error: error instanceof Error ? error.message : "Failed to validate API key" });
+            sendResponse({
+              isValid: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to validate API key",
+            });
           }
         })();
         return true;
@@ -84,14 +120,22 @@ class MarketDataExtractor {
           try {
             const data = request.data;
             if (!data || !data.query) {
-              sendResponse({ suggestions: MarketDataExtractor.POPULAR_SYMBOLS });
+              sendResponse({
+                suggestions: MarketDataExtractor.POPULAR_SYMBOLS,
+              });
               return;
             }
             const suggestions = await this.searchSymbols(data.query);
             sendResponse({ suggestions });
           } catch (error) {
             console.error("Error in SEARCH_SYMBOLS handler:", error);
-            sendResponse({ suggestions: [], error: error instanceof Error ? error.message : "Failed to search symbols" });
+            sendResponse({
+              suggestions: [],
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to search symbols",
+            });
           }
         })();
         return true;
@@ -104,7 +148,7 @@ class MarketDataExtractor {
   private getCachedData(symbol: string, source: DataSource): MarketData | null {
     const cacheKey = `${symbol}:${source}`;
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached) {
       const now = Date.now();
       if (now - cached.timestamp < MarketDataExtractor.CACHE_DURATION) {
@@ -122,27 +166,49 @@ class MarketDataExtractor {
     const cacheKey = `${data.symbol}:${data.source}`;
     this.cache.set(cacheKey, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
     console.log(`Cached data for ${cacheKey}`);
   }
 
   private async fetchMarketData(
-    { symbol, source }: { symbol: string; source: DataSource },
+    { symbol, source, interval, limit }: {
+      symbol: string;
+      source: DataSource;
+      interval?: string;
+      limit?: number;
+    },
     sendResponse: (response: any) => void
   ) {
+    // Set a timeout for the entire operation
+    const timeout = setTimeout(() => {
+      sendResponse({
+        error: `Request timed out while fetching data for ${symbol} from ${source}`,
+      });
+    }, 45000); // 45 second timeout
+
     try {
       console.log(`Fetching data for ${symbol} from ${source}`);
-      
+
       // Check cache first
       const cachedData = this.getCachedData(symbol, source);
       if (cachedData) {
+        clearTimeout(timeout);
         sendResponse(cachedData);
+        return;
+      }
+
+      if (!symbol || typeof symbol !== "string" || !source) {
+        clearTimeout(timeout);
+        sendResponse({
+          error: `Invalid request parameters: symbol=${symbol}, source=${source}`,
+        });
         return;
       }
 
       if (source === "alpha_vantage") {
         await this.fetchAlphaVantageData(symbol, (response) => {
+          clearTimeout(timeout);
           if (!("error" in response)) {
             this.setCachedData(response);
           }
@@ -150,59 +216,83 @@ class MarketDataExtractor {
         });
       } else {
         await this.fetchYahooFinanceData(symbol, (response) => {
+          clearTimeout(timeout);
           if (!("error" in response)) {
             this.setCachedData(response);
           }
           sendResponse(response);
-        });
+        }, { interval, limit });
       }
     } catch (error) {
+      clearTimeout(timeout);
       console.error(`Error fetching data from ${source}:`, error);
       sendResponse({
-        error: `Failed to fetch data from ${source}. ${error instanceof Error ? error.message : 'Unknown error'}`
+        error: `Failed to fetch data from ${source}. ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       });
     }
   }
 
   private async makeApiRequest(url: URL, options?: RequestInit): Promise<any> {
     const defaultOptions: RequestInit = {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Chrome Extension'
+        Accept: "application/json",
+        "User-Agent": "Chrome Extension",
       },
-      mode: 'cors',
-      ...options
+      mode: "cors",
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+      ...options,
     };
 
     try {
       const response = await fetch(url.toString(), defaultOptions);
-      
+
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'No error details available');
-        throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
+        const errorText = await response
+          .text()
+          .catch(() => "No error details available");
+        throw new Error(
+          `HTTP error! status: ${response.status}, details: ${errorText}`
+        );
       }
 
       const data = await response.json();
+
+      // Check if the response is empty or undefined
+      if (!data) {
+        throw new Error("Empty response received from the server");
+      }
+
       return data;
     } catch (error: unknown) {
       if (error instanceof Error) {
+        // Check for timeout
+        if (error.name === "TimeoutError" || error.name === "AbortError") {
+          throw new Error("Request timed out. Please try again.");
+        }
         throw error;
       }
-      throw new Error('Unknown error occurred while fetching data');
+      throw new Error("Unknown error occurred while fetching data");
     }
   }
 
-  private async fetchAlphaVantageData(symbol: string, sendResponse: (response: any) => void) {
+  private async fetchAlphaVantageData(
+    symbol: string,
+    sendResponse: (response: any) => void
+  ) {
     try {
       const apiKey = await this.getApiKey("alpha_vantage");
       if (!apiKey) {
-        throw new Error("Alpha Vantage API key not configured. Please set your API key in the extension settings.");
+        throw new Error(
+          "Alpha Vantage API key not configured. Please set your API key in the extension settings."
+        );
       }
-
       const url = new URL(this.apiEndpoints.alpha_vantage);
-      url.searchParams.append("function", "GLOBAL_QUOTE");
+      url.searchParams.append("function", "TIME_SERIES_INTRADAY");
       url.searchParams.append("symbol", symbol);
+      url.searchParams.append("interval", "5min");
       url.searchParams.append("apikey", apiKey);
 
       const data = await this.makeApiRequest(url);
@@ -211,24 +301,35 @@ class MarketDataExtractor {
         throw new Error(data["Error Message"]);
       }
 
-      if (!data["Global Quote"] || Object.keys(data["Global Quote"]).length === 0) {
+      const timeSeries = data["Time Series (5min)"];
+      if (!timeSeries || Object.keys(timeSeries).length === 0) {
         throw new Error(`No data available for symbol: ${symbol}`);
       }
 
-      const quote = data["Global Quote"];
-      const price = parseFloat(quote["05. price"]);
-      const volume = parseInt(quote["06. volume"]);
+      // Get the latest data point
+      const latestTimestamp = Object.keys(timeSeries)[0];
+      const quote = timeSeries[latestTimestamp];
 
-      if (isNaN(price) || isNaN(volume)) {
-        throw new Error("Invalid price or volume data received");
+      const price = parseFloat(quote["4. close"]);
+      const open = parseFloat(quote["1. open"]);
+      const high = parseFloat(quote["2. high"]);
+      const low = parseFloat(quote["3. low"]);
+      const volume = parseInt(quote["5. volume"]);
+
+      if ([price, open, high, low, volume].some(isNaN)) {
+        throw new Error("Invalid data received");
       }
 
       const marketData: MarketData = {
-        symbol: quote["01. symbol"] || symbol,
+        symbol,
         price,
+        open,
+        high,
+        low,
+        close: price,
         volume,
-        timestamp: Date.now(),
-        source: "alpha_vantage"
+        timestamp: new Date(latestTimestamp).getTime(),
+        source: "alpha_vantage",
       };
 
       console.log("Successfully fetched Alpha Vantage data:", marketData);
@@ -236,29 +337,39 @@ class MarketDataExtractor {
     } catch (error) {
       console.error("Alpha Vantage API error:", error);
       sendResponse({
-        error: error instanceof Error ? error.message : "Failed to fetch Alpha Vantage data"
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch Alpha Vantage data",
       });
     }
   }
 
-  private async fetchYahooFinanceData(symbol: string, sendResponse: (response: any) => void) {
+  private async fetchYahooFinanceData(
+    symbol: string,
+    sendResponse: (response: any) => void,
+    options?: { interval?: string; limit?: number }
+  ) {
     try {
-      if (!symbol || typeof symbol !== 'string') {
+      if (!symbol || typeof symbol !== "string") {
         throw new Error("Invalid symbol provided");
       }
 
       const end = Math.floor(Date.now() / 1000);
-      const start = end - 86400; // last 24 hours
+      const start = end - (options?.limit || 1) * 86400; // Default to 1 day if no limit
+      const interval = options?.interval || "1d"; // Default to daily data
 
-      const url = new URL(`${this.apiEndpoints.yahoo_finance}/${encodeURIComponent(symbol)}`);
+      const url = new URL(
+        `${this.apiEndpoints.yahoo_finance}/${encodeURIComponent(symbol)}`
+      );
       url.searchParams.append("period1", start.toString());
       url.searchParams.append("period2", end.toString());
-      url.searchParams.append("interval", "1d");
+      url.searchParams.append("interval", interval);
       url.searchParams.append("includePrePost", "false");
       url.searchParams.append("events", "div,split");
 
       console.log("Requesting URL:", url.toString());
-      
+
       const data = await this.makeApiRequest(url);
       console.log("Raw Yahoo Finance response:", data);
 
@@ -272,39 +383,68 @@ class MarketDataExtractor {
 
       const result = data.chart.result[0];
       const quote = result.indicators.quote[0];
-      
-      if (!result.timestamp?.length || !quote.close?.length || !quote.volume?.length) {
+
+      if (
+        !result.timestamp?.length ||
+        !quote.close?.length ||
+        !quote.volume?.length
+      ) {
         throw new Error(`Incomplete data received for symbol: ${symbol}`);
       }
 
-      let latestIndex = result.timestamp.length - 1;
-      let price = quote.close[latestIndex];
-      let volume = quote.volume[latestIndex];
+      // Convert all data points
+      const marketData: MarketData[] = result.timestamp
+        .map((timestamp: number, index: number) => {
+          const price = quote.close[index];
+          const open = quote.open[index];
+          const high = quote.high[index];
+          const low = quote.low[index];
+          const volume = quote.volume[index];
 
-      while (latestIndex >= 0 && (price === null || volume === null)) {
-        latestIndex--;
-        price = quote.close[latestIndex];
-        volume = quote.volume[latestIndex];
+          if (
+            price === null ||
+            open === null ||
+            high === null ||
+            low === null ||
+            volume === null ||
+            [price, open, high, low, volume].some(
+              (v) => typeof v !== "number" || isNaN(v)
+            )
+          ) {
+            return null;
+          }
+
+          return {
+            symbol: result.meta.symbol || symbol,
+            price,
+            open,
+            high,
+            low,
+            close: price,
+            volume,
+            timestamp: timestamp * 1000,
+            source: "yahoo_finance" as const,
+          };
+        })
+        .filter((item: MarketData | null): item is MarketData => item !== null);
+
+      if (marketData.length === 0) {
+        throw new Error(`No valid data available for symbol: ${symbol}`);
       }
 
-      if (latestIndex < 0 || typeof price !== 'number' || typeof volume !== 'number' || isNaN(price) || isNaN(volume)) {
-        throw new Error(`No valid price data available for symbol: ${symbol}`);
+      // If we're not requesting historical data, just return the latest point
+      if (!options?.limit) {
+        sendResponse(marketData[marketData.length - 1]);
+      } else {
+        sendResponse(marketData);
       }
-
-      const marketData: MarketData = {
-        symbol: result.meta.symbol || symbol,
-        price,
-        volume,
-        timestamp: result.timestamp[latestIndex] * 1000,
-        source: "yahoo_finance"
-      };
-
-      console.log("Successfully fetched Yahoo Finance data:", marketData);
-      sendResponse(marketData);
     } catch (error) {
       console.error("Yahoo Finance API error:", error);
       sendResponse({
-        error: error instanceof Error ? error.message : "Failed to fetch Yahoo Finance data"
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch Yahoo Finance data",
       });
     }
   }
@@ -320,7 +460,9 @@ class MarketDataExtractor {
 
         chrome.storage.local.get([`${source}_api_key`], (result) => {
           const apiKey = result[`${source}_api_key`];
-          console.log(`API key ${apiKey ? "found" : "not found"} for ${source}`);
+          console.log(
+            `API key ${apiKey ? "found" : "not found"} for ${source}`
+          );
           resolve(apiKey || null);
         });
       });
@@ -330,7 +472,10 @@ class MarketDataExtractor {
     }
   }
 
-  private async validateApiKey(source: DataSource, apiKey: string): Promise<boolean> {
+  private async validateApiKey(
+    source: DataSource,
+    apiKey: string
+  ): Promise<boolean> {
     try {
       if (source === "alpha_vantage") {
         const testUrl = new URL(this.apiEndpoints.alpha_vantage);
@@ -338,7 +483,7 @@ class MarketDataExtractor {
         testUrl.searchParams.append("symbol", "MSFT"); // Using Microsoft as test symbol
         testUrl.searchParams.append("interval", "1min");
         testUrl.searchParams.append("apikey", apiKey);
-        
+
         const data = await this.makeApiRequest(testUrl);
         return !("Error Message" in data) && !("Information" in data);
       }
@@ -350,7 +495,9 @@ class MarketDataExtractor {
     }
   }
 
-  private async searchSymbols(query: string): Promise<Array<{ symbol: string; name: string }>> {
+  private async searchSymbols(
+    query: string
+  ): Promise<Array<{ symbol: string; name: string }>> {
     try {
       if (query.length < 1) {
         return MarketDataExtractor.POPULAR_SYMBOLS;
@@ -358,12 +505,13 @@ class MarketDataExtractor {
 
       const source = "alpha_vantage";
       const apiKey = await this.getApiKey(source);
-      
+
       if (!apiKey) {
         // If no API key, return filtered popular symbols
         return MarketDataExtractor.POPULAR_SYMBOLS.filter(
-          item => item.symbol.includes(query.toUpperCase()) || 
-                 item.name.toLowerCase().includes(query.toLowerCase())
+          (item) =>
+            item.symbol.includes(query.toUpperCase()) ||
+            item.name.toLowerCase().includes(query.toLowerCase())
         );
       }
 
@@ -373,11 +521,12 @@ class MarketDataExtractor {
       url.searchParams.append("apikey", apiKey);
 
       const data = await this.makeApiRequest(url);
-      
+
       if ("Error Message" in data || !data.bestMatches) {
         return MarketDataExtractor.POPULAR_SYMBOLS.filter(
-          item => item.symbol.includes(query.toUpperCase()) || 
-                 item.name.toLowerCase().includes(query.toLowerCase())
+          (item) =>
+            item.symbol.includes(query.toUpperCase()) ||
+            item.name.toLowerCase().includes(query.toLowerCase())
         );
       }
 
@@ -388,8 +537,9 @@ class MarketDataExtractor {
     } catch (error) {
       console.error("Error searching symbols:", error);
       return MarketDataExtractor.POPULAR_SYMBOLS.filter(
-        item => item.symbol.includes(query.toUpperCase()) || 
-               item.name.toLowerCase().includes(query.toLowerCase())
+        (item) =>
+          item.symbol.includes(query.toUpperCase()) ||
+          item.name.toLowerCase().includes(query.toLowerCase())
       );
     }
   }

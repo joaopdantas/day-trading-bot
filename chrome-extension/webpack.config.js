@@ -9,8 +9,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "[name].js",
-  },
-  module: {
+  },  module: {
     rules: [
       {
         test: /\.tsx?$/,
@@ -21,12 +20,15 @@ module.exports = {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
       },
+      {
+        test: /\.(woff|woff2|eot|ttf|otf)$/i,
+        type: 'asset/resource',
+      },
     ],
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
-  },
-  plugins: [
+  },  plugins: [
     new CopyPlugin({
       patterns: [
         { from: "manifest.json" },
@@ -36,4 +38,7 @@ module.exports = {
       ],
     }),
   ],
+  optimization: {
+    minimize: false, // Don't minify the content script for better debugging
+  },
 };
