@@ -43,3 +43,6 @@ python-dotenv==1.0.0
 
 # Serialization for model saving/loading
 joblib==1.3.2
+
+# Financial data fetching
+yfinance==0.2.62
