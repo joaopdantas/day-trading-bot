@@ -172,7 +172,7 @@ class StandardizedHypothesisTestingFramework:
             data = self.test_data_2024.copy()
             
             # Test your ML strategy with standardized conditions
-            strategy = MLTradingStrategy(confidence_threshold=0.05)
+            strategy = MLTradingStrategy(confidence_threshold=0.30)
             results = self._backtest_strategy_standardized(strategy, data, "Your AI System")
             
             print(f"✅ YOUR AI SYSTEM Results (2024 STANDARDIZED):")
@@ -197,18 +197,12 @@ class StandardizedHypothesisTestingFramework:
         backtester = ProductionBacktester(
             initial_capital=10000,
             transaction_cost=0.001,
-            max_position_size=0.05  # REDUCED from 0.3 to 0.05
+            max_position_size=1.0 # REDUCED from 0.3 to 0.05
         )
         
         backtester.set_strategy(strategy)
         
-        initial_price = data['close'].iloc[0]
-        initial_shares = int(10000 / initial_price)
-
-        # Force initial position
-        backtester.portfolio.buy_stock('STOCK', initial_shares, initial_price, 0)
-        print(f"🎯 Starting with {initial_shares} shares at ${initial_price:.2f}")
-
+        
         
         # Run backtest on standardized data
         results = backtester.run_backtest(data)
