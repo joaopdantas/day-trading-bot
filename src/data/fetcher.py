@@ -73,6 +73,187 @@ class MarketDataFetcher:
         raise NotImplementedError("Subclasses must implement this method")
 
 
+class PolygonAPI(MarketDataFetcher):
+    """Implementation for Polygon.io API - Professional grade data similar to Alpha Vantage."""
+    
+    BASE_URL = "https://api.polygon.io"
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """Initialize Polygon API with API key from environment."""
+        self.api_key = api_key or os.getenv("POLYGON_API_KEY")
+        if not self.api_key:
+            logger.warning("No Polygon API key provided. Please set POLYGON_API_KEY in your .env file.")
+    
+    def fetch_historical_data(
+        self,
+        symbol: str,
+        interval: str = "1d",
+        start_date: Optional[Union[str, datetime]] = None,
+        end_date: Optional[Union[str, datetime]] = None,
+    ) -> pd.DataFrame:
+        """
+        Fetch historical price data from Polygon.io.
+        
+        Args:
+            symbol: The stock symbol
+            interval: Time interval between data points ('1d', '1h', etc.)
+            start_date: Start date for historical data
+            end_date: End date for historical data
+            
+        Returns:
+            DataFrame with historical price data
+        """
+        # Default date range if not provided
+        if end_date is None:
+            end_date = datetime.now()
+        elif isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+            
+        if start_date is None:
+            start_date = end_date - timedelta(days=365)  # Default 1 year
+        elif isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+        
+        # Format dates for Polygon API (YYYY-MM-DD)
+        start_str = start_date.strftime('%Y-%m-%d')
+        end_str = end_date.strftime('%Y-%m-%d')
+        
+        # Map intervals to Polygon's format
+        interval_mapping = {
+            "1m": ("1", "minute"),
+            "5m": ("5", "minute"),
+            "15m": ("15", "minute"),
+            "30m": ("30", "minute"),
+            "1h": ("1", "hour"),
+            "1d": ("1", "day"),
+            "1w": ("1", "week"),
+            "1M": ("1", "month"),
+        }
+        
+        if interval not in interval_mapping:
+            logger.warning(f"Unsupported interval: {interval}, using 1d")
+            interval = "1d"
+        
+        multiplier, timespan = interval_mapping[interval]
+        
+        # Build URL for aggregates endpoint
+        url = f"{self.BASE_URL}/v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{start_str}/{end_str}"
+        
+        params = {
+            "adjusted": "true",
+            "sort": "asc",
+            "limit": 50000,  # Max limit
+            "apikey": self.api_key
+        }
+        
+        logger.info(f"Fetching {interval} data for {symbol} from Polygon.io")
+        
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Check for errors
+            if data.get("status") != "OK":
+                error_message = data.get("error", "Unknown error")
+                logger.error(f"Polygon API error: {error_message}")
+                return pd.DataFrame()
+            
+            # Extract results
+            results = data.get("results", [])
+            if not results:
+                logger.warning(f"No data returned for {symbol}")
+                return pd.DataFrame()
+            
+            # Convert to DataFrame
+            df_data = []
+            for result in results:
+                df_data.append({
+                    "open": result.get("o"),
+                    "high": result.get("h"),
+                    "low": result.get("l"),
+                    "close": result.get("c"),
+                    "volume": result.get("v"),
+                    "timestamp": pd.to_datetime(result.get("t"), unit='ms')  # Polygon uses milliseconds
+                })
+            
+            df = pd.DataFrame(df_data)
+            df.set_index("timestamp", inplace=True)
+            df = df.sort_index()
+            
+            # Ensure numeric types
+            for col in ["open", "high", "low", "close", "volume"]:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            logger.info(f"Successfully fetched {len(df)} data points for {symbol}")
+            return df
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching data from Polygon.io: {e}")
+            return pd.DataFrame()
+        except Exception as e:
+            logger.error(f"Unexpected error with Polygon.io API: {e}")
+            return pd.DataFrame()
+    
+    def fetch_latest_price(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch latest price for a stock from Polygon.io.
+        
+        Args:
+            symbol: The stock symbol
+            
+        Returns:
+            Dictionary with latest price information
+        """
+        # Use the previous close endpoint for latest price
+        url = f"{self.BASE_URL}/v2/aggs/ticker/{symbol}/prev"
+        
+        params = {
+            "adjusted": "true",
+            "apikey": self.api_key
+        }
+        
+        logger.info(f"Fetching latest price for {symbol} from Polygon.io")
+        
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get("status") != "OK":
+                error_message = data.get("error", "Unknown error")
+                logger.error(f"Polygon API error: {error_message}")
+                return {}
+            
+            results = data.get("results", [])
+            if not results:
+                logger.warning(f"No latest price data for {symbol}")
+                return {}
+            
+            result = results[0]
+            
+            latest_price = {
+                "symbol": symbol,
+                "price": float(result.get("c", 0)),  # close price
+                "open": float(result.get("o", 0)),
+                "high": float(result.get("h", 0)),
+                "low": float(result.get("l", 0)),
+                "volume": int(result.get("v", 0)),
+                "timestamp": pd.to_datetime(result.get("t"), unit='ms').isoformat(),
+            }
+            
+            return latest_price
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching latest price from Polygon.io: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error fetching latest price from Polygon.io: {e}")
+            return {}
+
+
 class AlphaVantageAPI(MarketDataFetcher):
     """Implementation for Alpha Vantage API."""
     
@@ -373,7 +554,7 @@ def get_data_api(api_name: str = "alpha_vantage", api_key: Optional[str] = None)
     Factory function to return the appropriate API client.
     
     Args:
-        api_name: Name of the API to use (alpha_vantage, yahoo_finance)
+        api_name: Name of the API to use (alpha_vantage, yahoo_finance, polygon)
         api_key: API key for authentication
         
     Returns:
@@ -385,10 +566,13 @@ def get_data_api(api_name: str = "alpha_vantage", api_key: Optional[str] = None)
             api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
         elif api_name.lower() == "yahoo_finance":
             api_key = os.getenv("YAHOO_FINANCE_API_KEY")
+        elif api_name.lower() == "polygon":
+            api_key = os.getenv("POLYGON_API_KEY")
     
     api_mapping = {
         "alpha_vantage": AlphaVantageAPI,
         "yahoo_finance": YahooFinanceAPI,
+        "polygon": PolygonAPI,
     }
     
     api_class = api_mapping.get(api_name.lower())
