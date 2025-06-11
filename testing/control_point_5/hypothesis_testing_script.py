@@ -187,7 +187,7 @@ class StandardizedHypothesisTestingFramework:
             data = self.test_data_2024.copy()
             
             # Test your ML strategy with CURRENT settings (no modifications)
-            strategy = MLTradingStrategy(confidence_threshold=0.45)
+            strategy = MLTradingStrategy(confidence_threshold=0.40)
             results = self._backtest_strategy_standardized(strategy, data, "Your AI System")
             
             print(f"✅ YOUR AI SYSTEM Results (2024 STANDARDIZED):")
