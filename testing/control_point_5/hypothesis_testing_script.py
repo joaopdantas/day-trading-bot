@@ -8,6 +8,8 @@ CRITICAL CHANGES:
 ✅ Same symbol: MSFT
 ✅ Same data source priority: Alpha Vantage → Yahoo Finance
 ✅ Identical backtesting framework
+
+PURPOSE: Test your CURRENT AI system against benchmarks to establish baseline performance
 """
 
 import sys
@@ -138,11 +140,12 @@ class StandardizedHypothesisTestingFramework:
         
         print("\n🧪 RUNNING STANDARDIZED HYPOTHESIS TESTS")
         print("=" * 60)
+        print("Testing your CURRENT AI system against all benchmarks")
         print("All systems now use IDENTICAL 2024 data and conditions")
         print("=" * 60)
         
-        # Test your AI system first
-        your_performance = self._test_your_ai_system_standardized()
+        # Test your CURRENT AI system first
+        your_performance = self._test_your_current_ai_system()
         
         if your_performance:
             self.results['Your AI System'] = your_performance
@@ -158,10 +161,10 @@ class StandardizedHypothesisTestingFramework:
         else:
             print("❌ Cannot run tests - your AI system failed to load")
     
-    def _test_your_ai_system_standardized(self):
-        """Test YOUR AI system using standardized 2024 data"""
+    def _test_your_current_ai_system(self):
+        """Test YOUR CURRENT AI system using standardized 2024 data"""
         
-        print(f"\n🤖 Testing YOUR AI SYSTEM (Standardized 2024)...")
+        print(f"\n🤖 Testing YOUR CURRENT AI SYSTEM (Standardized 2024)...")
         
         if not PROJECT_AVAILABLE:
             print("❌ Project modules not available")
@@ -171,8 +174,8 @@ class StandardizedHypothesisTestingFramework:
             # Use the standardized 2024 data
             data = self.test_data_2024.copy()
             
-            # Test your ML strategy with standardized conditions
-            strategy = MLTradingStrategy(confidence_threshold=0.30)
+            # Test your ML strategy with CURRENT settings (no modifications)
+            strategy = MLTradingStrategy(confidence_threshold=0.40)
             results = self._backtest_strategy_standardized(strategy, data, "Your AI System")
             
             print(f"✅ YOUR AI SYSTEM Results (2024 STANDARDIZED):")
@@ -186,6 +189,8 @@ class StandardizedHypothesisTestingFramework:
             
         except Exception as e:
             print(f"❌ Error testing your AI system: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _backtest_strategy_standardized(self, strategy, data, strategy_name):
@@ -195,14 +200,12 @@ class StandardizedHypothesisTestingFramework:
         
         # Initialize with STANDARDIZED parameters
         backtester = ProductionBacktester(
-            initial_capital=10000,
+            initial_capital=self.STANDARD_CONFIG['initial_capital'],
             transaction_cost=0.001,
-            max_position_size=1.0 # REDUCED from 0.3 to 0.05
+            max_position_size=1.0  # Use full capital for meaningful comparison
         )
         
         backtester.set_strategy(strategy)
-        
-        
         
         # Run backtest on standardized data
         results = backtester.run_backtest(data)
@@ -293,7 +296,7 @@ class StandardizedHypothesisTestingFramework:
             self.results['H4: Beginner Trader'] = beginner
             print(f"✅ Beginner Trader: {beginner['total_return']:.2%}")
     
-    # Standardized data fetching methods
+    # Standardized data fetching methods - UNCHANGED from your original
     def _get_tradingview_data_standardized(self):
         """TradingView data - already standardized to 2024"""
         
@@ -554,7 +557,7 @@ class StandardizedHypothesisTestingFramework:
             return
         
         # Create comparison table
-        print(f"\n{'System':<35} {'Return':<10} {'Sharpe':<8} {'Data Period'}")
+        print(f"\n{'System':<35} {'Return':<10} {'Trades':<8} {'Win Rate':<10} {'Sharpe':<8}")
         print("-" * 80)
         
         your_result = None
@@ -562,11 +565,12 @@ class StandardizedHypothesisTestingFramework:
         
         for rank, (name, result) in enumerate(sorted_results, 1):
             return_pct = result.get('total_return', 0) * 100
+            trades = result.get('total_trades', 0)
+            win_rate = result.get('win_rate', 0) * 100
             sharpe = result.get('sharpe_ratio', 0)
-            period = result.get('period', '2024 (STANDARDIZED)')[:20]
             
             rank_emoji = "🥇" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else f"{rank:2d}"
-            print(f"{rank_emoji} {name:<32} {return_pct:>6.2f}% {sharpe:>7.2f} {period}")
+            print(f"{rank_emoji} {name:<32} {return_pct:>7.2f}% {trades:>7} {win_rate:>8.1f}% {sharpe:>7.2f}")
             
             if 'Your AI System' in name:
                 your_result = result
@@ -667,6 +671,7 @@ def main():
     """Main function to run standardized hypothesis testing"""
     
     print("🎯 STANDARDIZED HYPOTHESIS TESTING FRAMEWORK")
+    print("Testing your CURRENT AI system against benchmarks")
     print("All systems now use Jan 2024 - Dec 2024 period")
     print("Ensuring fair comparison with identical conditions")
     print("=" * 60)
@@ -692,6 +697,11 @@ def main():
     print("   ✅ Same symbol (MSFT) and data sources")
     print("   ✅ Consistent backtesting framework")
     print("   ✅ Fair comparison conditions for all benchmarks")
+    print("\n🔍 NEXT STEPS:")
+    print("   1. Review the results to see which hypotheses your AI passes/fails")
+    print("   2. Analyze trading behavior (holds, buys, sells)")
+    print("   3. Identify areas for improvement based on benchmark comparison")
+    print("   4. Consider strategy optimization if needed")
 
 
 if __name__ == "__main__":

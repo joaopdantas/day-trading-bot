@@ -1,6 +1,6 @@
 STANDARDIZED HYPOTHESIS TESTING FRAMEWORK REPORT
 ================================================================================
-Generated: 2025-06-10 17:54:49
+Generated: 2025-06-11 17:43:32
 
 STANDARDIZED TEST CONDITIONS:
 - Test Symbol: MSFT
@@ -69,20 +69,20 @@ STANDARDIZED RESULTS:
 
 #8 Your AI System:
   initial_capital: 10000
-  final_value: 10803.7622
-  total_return: 0.0804 (8.04%)
-  benchmark_return: 0.1541 (15.41%)
-  alpha: -0.0737
-  trading_days: 251
-  total_trades: 32
-  buy_trades: 16
-  sell_trades: 16
-  win_rate: 0.5000
-  sharpe_ratio: 0.6282 (62.82%)
-  max_drawdown: 0.0157
-  volatility: 0.0167
-  average_daily_return: 0.0000 (0.00%)
-  hit_rate: 0.1217
+  final_value: 10761.5806
+  total_return: 0.0762 (7.62%)
+  benchmark_return: 0.1365 (13.65%)
+  alpha: -0.0604
+  trading_days: 252
+  total_trades: 9
+  buy_trades: 5
+  sell_trades: 4
+  win_rate: 0.7500
+  sharpe_ratio: 0.6591 (65.91%)
+  max_drawdown: 0.0895
+  volatility: 0.1356
+  average_daily_return: 0.0004 (0.04%)
+  hit_rate: 0.2857
   stop_losses_triggered: 0
   take_profits_triggered: 0
   data_type: STANDARDIZED 2024 DATA

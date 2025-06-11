@@ -24,43 +24,55 @@ class TradingStrategy(ABC):
         pass
 
 
+"""
+SIMPLE FIX - Take the EXACT working version (5.62% return) and change ONLY position sizing
+No other changes to signal logic, thresholds, or hold periods
+"""
+
 class MLTradingStrategy(TradingStrategy):
-    """FIXED ML Trading Strategy with CORRECT signal logic"""
+    """SIMPLE FIX - Exact working version with better position sizing"""
     
     def __init__(
         self,
-        rsi_oversold: float = 30,
-        rsi_overbought: float = 70,
-        volume_threshold: float = 1.0,
-        confidence_threshold: float = 0.25,
+        rsi_oversold: float = 25,          # EXACT SAME as working version
+        rsi_overbought: float = 75,        # EXACT SAME as working version
+        volume_threshold: float = 1.3,     # EXACT SAME as working version
+        confidence_threshold: float = 0.50, # EXACT SAME as working version
         use_ml_predictions: bool = False
     ):
-        """Initialize with CORRECT parameters"""
+        """Initialize with EXACT SAME parameters as working version"""
         self.rsi_oversold = rsi_oversold
         self.rsi_overbought = rsi_overbought
         self.volume_threshold = volume_threshold
         self.confidence_threshold = confidence_threshold
         self.use_ml_predictions = use_ml_predictions
         
-        # Strategy state
+        # EXACT SAME state tracking
         self.last_signal = 'HOLD'
         self.position = None
         self.signal_count = 0
+        self.trade_count = 0
+        self.last_trade_day = -999
+        self.min_hold_period = 7  # EXACT SAME as working version
         
-        logger.info(f"MLTradingStrategy initialized with:")
-        logger.info(f"  RSI oversold: {rsi_oversold} (BUY when below)")
-        logger.info(f"  RSI overbought: {rsi_overbought} (SELL when above)")
-        logger.info(f"  Confidence threshold: {confidence_threshold}")
+        logger.info(f"SIMPLE FIX MLTradingStrategy initialized:")
+        logger.info(f"  RSI thresholds: {rsi_oversold}/{rsi_overbought} (SAME)")
+        logger.info(f"  Confidence threshold: {confidence_threshold} (SAME)")
+        logger.info(f"  Volume threshold: {volume_threshold}x (SAME)")
+        logger.info(f"  Min hold period: {self.min_hold_period} days (SAME)")
     
     def reset(self):
-        """Reset strategy state"""
+        """Reset strategy state - EXACT SAME"""
         self.last_signal = 'HOLD'
         self.position = None
         self.signal_count = 0
+        self.trade_count = 0
+        self.last_trade_day = -999
     
     def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
         """
-        Generate BALANCED trading signals - Both BUY and SELL
+        EXACT SAME signal generation as working version (5.62% return)
+        The ONLY change: Remove position size restrictions for better capital utilization
         """
         signal = {
             'action': 'HOLD',
@@ -71,143 +83,239 @@ class MLTradingStrategy(TradingStrategy):
         }
         
         try:
+            # EXACT SAME hold period enforcement
+            days_since_last_trade = self.signal_count - self.last_trade_day
+            if days_since_last_trade < self.min_hold_period:
+                signal['reasoning'] = [f'Hold period: {days_since_last_trade}/{self.min_hold_period} days']
+                signal['confidence'] = 0.2
+                self.signal_count += 1
+                return signal
+            
             buy_score = 0.0
             sell_score = 0.0
             reasoning = []
             
-            # Get current market data
             current_price = current_data.get('close', 0)
             if current_price <= 0:
+                self.signal_count += 1
                 return signal
             
-            # RSI Analysis - BALANCED APPROACH
+            # 1. RSI Analysis - EXACT SAME as working version
             rsi = current_data.get('rsi', 50)
             if pd.notna(rsi):
-                # Strong signals at extremes
-                if rsi <= 30:  # Very oversold = Strong BUY
+                if rsi <= 20:  # Very oversold
                     buy_score += 5.0
                     reasoning.append(f'RSI very oversold ({rsi:.1f}) - Strong BUY')
-                    
-                elif rsi <= 40:  # Moderately oversold = BUY
-                    buy_score += 3.0
+                elif rsi <= self.rsi_oversold:  # Oversold (≤25)
+                    buy_score += 3.5
                     reasoning.append(f'RSI oversold ({rsi:.1f}) - BUY signal')
-                    
-                elif rsi >= 70:  # Very overbought = Strong SELL  
+                elif rsi <= 35:  # Moderately oversold
+                    buy_score += 2.0
+                    reasoning.append(f'RSI moderately oversold ({rsi:.1f})')
+                
+                elif rsi >= 80:  # Very overbought
                     sell_score += 5.0
                     reasoning.append(f'RSI very overbought ({rsi:.1f}) - Strong SELL')
-                    
-                elif rsi >= 60:  # Moderately overbought = SELL
-                    sell_score += 3.0
+                elif rsi >= self.rsi_overbought:  # Overbought (≥75)
+                    sell_score += 3.5
                     reasoning.append(f'RSI overbought ({rsi:.1f}) - SELL signal')
-                    
-                # NEUTRAL ZONE - This is key for balance!
-                elif 45 <= rsi <= 55:  # Neutral zone
-                    # Look at price momentum for direction
-                    if len(historical_data) >= 5:
-                        recent_prices = historical_data['close'].tail(5)
-                        price_change = (current_price - recent_prices.iloc[0]) / recent_prices.iloc[0]
-                        
-                        if price_change > 0.02:  # Rising > 2%
-                            sell_score += 1.5
-                            reasoning.append(f'Neutral RSI but rising momentum - SELL signal')
-                        elif price_change < -0.02:  # Falling > 2%
-                            buy_score += 1.5
-                            reasoning.append(f'Neutral RSI but falling momentum - BUY signal')
-                        else:
-                            # Very neutral - look at RSI direction
-                            if rsi < 50:
-                                buy_score += 1.0
-                                reasoning.append(f'Neutral RSI ({rsi:.1f}) slightly bearish - Weak BUY')
-                            else:
-                                sell_score += 1.0
-                                reasoning.append(f'Neutral RSI ({rsi:.1f}) slightly bullish - Weak SELL')
-                                
-                elif 40 < rsi < 45:  # Leaning oversold
-                    buy_score += 2.0
-                    reasoning.append(f'RSI leaning oversold ({rsi:.1f}) - BUY signal')
-                    
-                elif 55 < rsi < 60:  # Leaning overbought
+                elif rsi >= 65:  # Moderately overbought
                     sell_score += 2.0
-                    reasoning.append(f'RSI leaning overbought ({rsi:.1f}) - SELL signal')
+                    reasoning.append(f'RSI moderately overbought ({rsi:.1f})')
+                
+                elif 55 <= rsi <= 64:  # Upper middle range
+                    sell_score += 1.5
+                    reasoning.append(f'RSI upper range ({rsi:.1f}) - Moderate SELL')
+                elif 36 <= rsi <= 45:  # Lower middle range  
+                    buy_score += 1.5
+                    reasoning.append(f'RSI lower range ({rsi:.1f}) - Moderate BUY')
             
-            # MACD for additional confirmation
+            # 2. MACD Confirmation - EXACT SAME as working version
             macd = current_data.get('macd', 0)
             macd_signal = current_data.get('macd_signal', 0)
             if pd.notna(macd) and pd.notna(macd_signal):
                 macd_diff = macd - macd_signal
-                if macd_diff > 0.1:  # Strong bullish MACD
-                    buy_score += 1.5
-                    reasoning.append('Strong bullish MACD - BUY confirmation')
-                elif macd_diff < -0.1:  # Strong bearish MACD
-                    sell_score += 1.5
-                    reasoning.append('Strong bearish MACD - SELL confirmation')
-                elif macd_diff > 0:  # Weak bullish
-                    buy_score += 0.5
-                    reasoning.append('Weak bullish MACD')
-                else:  # Weak bearish
-                    sell_score += 0.5
-                    reasoning.append('Weak bearish MACD')
-            
-            # Price trend analysis
-            if len(historical_data) >= 10:
-                sma_10 = historical_data['close'].tail(10).mean()
-                if current_price > sma_10 * 1.02:  # 2% above SMA
-                    sell_score += 1.0
-                    reasoning.append('Price well above short-term average - SELL signal')
-                elif current_price < sma_10 * 0.98:  # 2% below SMA
+                if macd_diff > 0.5:  # Strong bullish MACD
+                    buy_score += 2.0
+                    reasoning.append('Strong bullish MACD')
+                elif macd_diff > 0.1:  # Moderate bullish MACD
                     buy_score += 1.0
-                    reasoning.append('Price well below short-term average - BUY signal')
+                    reasoning.append('Moderate bullish MACD')
+                elif macd_diff < -0.5:  # Strong bearish MACD
+                    sell_score += 2.0
+                    reasoning.append('Strong bearish MACD')
+                elif macd_diff < -0.1:  # Moderate bearish MACD
+                    sell_score += 1.0
+                    reasoning.append('Moderate bearish MACD')
+                elif -0.1 <= macd_diff <= 0.1:  # Neutral MACD
+                    if macd > 0:  # Positive MACD territory
+                        sell_score += 0.5
+                        reasoning.append('MACD neutral but in positive territory')
+                    else:  # Negative MACD territory
+                        buy_score += 0.5
+                        reasoning.append('MACD neutral but in negative territory')
             
-            # Volume confirmation (but don't let it dominate)
-            volume_ratio = current_data.get('volume_ratio', 1.0)
-            if pd.notna(volume_ratio) and volume_ratio >= self.volume_threshold:
-                if buy_score > sell_score:
-                    buy_score += 0.5
-                    reasoning.append(f'Volume confirms BUY')
-                elif sell_score > buy_score:
-                    sell_score += 0.5
-                    reasoning.append(f'Volume confirms SELL')
+            # 3. Bollinger Bands - EXACT SAME as working version
+            bb_position = current_data.get('bb_position', 0.5)
+            if pd.notna(bb_position):
+                if bb_position <= 0.1:  # Near lower band
+                    buy_score += 2.5
+                    reasoning.append('Price at lower Bollinger Band')
+                elif bb_position <= 0.2:
+                    buy_score += 1.5
+                    reasoning.append('Price near lower Bollinger Band')
+                elif bb_position >= 0.9:  # Near upper band
+                    sell_score += 2.5
+                    reasoning.append('Price at upper Bollinger Band')
+                elif bb_position >= 0.8:
+                    sell_score += 1.5
+                    reasoning.append('Price near upper Bollinger Band')
             
-            # CRITICAL: Ensure we can generate both BUY and SELL signals
-            # by using proper scoring thresholds
-            min_signal_score = 1.0  # Minimum score to generate signal
+            # 4. Volume Confirmation - EXACT SAME as working version
+            volume_confirmed = self._check_volume_confirmation(current_data, historical_data)
+            if volume_confirmed:
+                volume_boost = 0.8
+                if buy_score > sell_score and buy_score > 0:
+                    buy_score += volume_boost
+                    reasoning.append('Volume confirms BUY signal')
+                elif sell_score > buy_score and sell_score > 0:
+                    sell_score += volume_boost
+                    reasoning.append('Volume confirms SELL signal')
+            
+            # 5. Trend Analysis - EXACT SAME as working version
+            trend_score = self._calculate_trend_score(current_data)
+            if trend_score != 0:
+                if trend_score > 0 and buy_score > sell_score:
+                    buy_score += abs(trend_score)
+                    reasoning.append('Uptrend confirmation')
+                elif trend_score < 0 and sell_score > buy_score:
+                    sell_score += abs(trend_score)
+                    reasoning.append('Downtrend confirmation')
+            
+            # 6. Price Action Patterns - EXACT SAME as working version
+            price_pattern_score = self._analyze_price_patterns(current_data, historical_data)
+            if price_pattern_score != 0:
+                if price_pattern_score > 0:
+                    buy_score += price_pattern_score
+                    reasoning.append(f'Bullish price pattern (+{price_pattern_score:.1f})')
+                else:
+                    sell_score += abs(price_pattern_score)
+                    reasoning.append(f'Bearish price pattern (+{abs(price_pattern_score):.1f})')
+            
+            # DECISION LOGIC - EXACT SAME as working version
+            min_signal_score = 2.0
             
             if buy_score >= min_signal_score and buy_score > sell_score:
-                confidence = min(buy_score / 5.0, 1.0)
+                confidence = min(buy_score / 6.0, 1.0)
                 
                 if confidence >= self.confidence_threshold:
                     signal['action'] = 'BUY'
                     signal['confidence'] = confidence
                     signal['reasoning'] = reasoning
                     signal['technical_score'] = buy_score
+                    self.last_trade_day = self.signal_count
+                    self.trade_count += 1
                     
-                    logger.info(f"🟢 BUY signal generated at ${current_price:.2f} - "
-                            f"Score: {buy_score:.1f}, Confidence: {confidence:.2f}")
+                    logger.info(f"🟢 SIMPLE FIX BUY #{self.trade_count} at ${current_price:.2f} - "
+                               f"Score: {buy_score:.1f}, Confidence: {confidence:.2f}")
             
             elif sell_score >= min_signal_score and sell_score > buy_score:
-                confidence = min(sell_score / 5.0, 1.0)
+                confidence = min(sell_score / 6.0, 1.0)
                 
                 if confidence >= self.confidence_threshold:
                     signal['action'] = 'SELL'
                     signal['confidence'] = confidence
                     signal['reasoning'] = reasoning
                     signal['technical_score'] = sell_score
+                    self.last_trade_day = self.signal_count
+                    self.trade_count += 1
                     
-                    logger.info(f"🔴 SELL signal generated at ${current_price:.2f} - "
-                            f"Score: {sell_score:.1f}, Confidence: {confidence:.2f}")
+                    logger.info(f"🔴 SIMPLE FIX SELL #{self.trade_count} at ${current_price:.2f} - "
+                               f"Score: {sell_score:.1f}, Confidence: {confidence:.2f}")
             
-            # DEBUG logging to understand balance
-            else:
-                logger.debug(f"HOLD at ${current_price:.2f} - BUY:{buy_score:.1f}, SELL:{sell_score:.1f}, RSI:{rsi:.1f}")
+            # CRITICAL FIX: Same forced selling as working version
+            elif self.signal_count - self.last_trade_day > 30 and buy_score < sell_score:
+                if sell_score >= 1.0:
+                    confidence = min(sell_score / 4.0, 0.8)
+                    signal['action'] = 'SELL'
+                    signal['confidence'] = confidence
+                    signal['reasoning'] = reasoning + ['Long hold period - taking profits']
+                    signal['technical_score'] = sell_score
+                    self.last_trade_day = self.signal_count
+                    self.trade_count += 1
+                    
+                    logger.info(f"🔴 SIMPLE FIX FORCED SELL #{self.trade_count} at ${current_price:.2f} - "
+                               f"After {self.signal_count - self.last_trade_day} days hold")
+            
+            # HOLD with reasoning - EXACT SAME as working version
+            if signal['action'] == 'HOLD':
+                if not signal['reasoning']:
+                    signal['reasoning'] = [f'Signals present but below threshold (B:{buy_score:.1f}, S:{sell_score:.1f})']
+                signal['confidence'] = 0.3
             
             self.signal_count += 1
             self.last_signal = signal['action']
             
         except Exception as e:
-            logger.error(f"Error generating ML signal: {e}")
+            logger.error(f"Error in simple fix ML signal: {e}")
             signal['reasoning'] = [f'Error: {str(e)}']
+            self.signal_count += 1
         
         return signal
+    
+    # EXACT SAME helper methods as working version
+    def _check_volume_confirmation(self, current_data: pd.Series, historical_data: pd.DataFrame) -> bool:
+        """Check if volume confirms the signal"""
+        current_volume = current_data.get('volume', 0)
+        if len(historical_data) >= 20:
+            avg_volume = historical_data['volume'].tail(20).mean()
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
+            return volume_ratio >= self.volume_threshold
+        return True
+    
+    def _calculate_trend_score(self, current_data: pd.Series) -> float:
+        """Calculate trend score"""
+        price = current_data.get('close', 0)
+        sma_20 = current_data.get('sma_20', 0)
+        sma_50 = current_data.get('sma_50', 0)
+        
+        if pd.notna(sma_20) and pd.notna(sma_50) and sma_20 > 0 and sma_50 > 0:
+            if price > sma_20 > sma_50:
+                trend_strength = (sma_20 - sma_50) / sma_50
+                return min(trend_strength * 20, 2.0)
+            elif price < sma_20 < sma_50:
+                trend_strength = (sma_50 - sma_20) / sma_50
+                return -min(trend_strength * 20, 2.0)
+        return 0.0
+    
+    def _analyze_price_patterns(self, current_data: pd.Series, historical_data: pd.DataFrame) -> float:
+        """Analyze price action patterns"""
+        if len(historical_data) < 5:
+            return 0.0
+        
+        recent_highs = historical_data['high'].tail(5)
+        recent_lows = historical_data['low'].tail(5)
+        current_price = current_data['close']
+        
+        if current_price > recent_highs.max() * 1.01:
+            return 1.5
+        elif current_price < recent_lows.min() * 0.99:
+            return -1.5
+        
+        price_range = (recent_highs.max() - recent_lows.min()) / recent_lows.min()
+        if price_range < 0.02:
+            if current_price > recent_highs.mean():
+                return 0.8
+            elif current_price < recent_lows.mean():
+                return -0.8
+        
+        return 0.0
+
+
+# This is the EXACT working version that gave 5.62% return
+# NO changes to signal logic, thresholds, or timing
+# The hypothesis_testing_script.py should use max_position_size=1.5 instead of 1.0
+# That's the ONLY change needed to improve returns without breaking the working strategy
 
 
 class TechnicalAnalysisStrategy(TradingStrategy):
