@@ -73,8 +73,13 @@ class MarketDataFetcher:
         raise NotImplementedError("Subclasses must implement this method")
 
 
+"""
+FIXED Polygon API - Handle DELAYED status and correct date ranges
+Replace the PolygonAPI class in your fetcher.py with this fixed version
+"""
+
 class PolygonAPI(MarketDataFetcher):
-    """Implementation for Polygon.io API - Professional grade data similar to Alpha Vantage."""
+    """FIXED Implementation for Polygon.io API"""
     
     BASE_URL = "https://api.polygon.io"
     
@@ -92,18 +97,9 @@ class PolygonAPI(MarketDataFetcher):
         end_date: Optional[Union[str, datetime]] = None,
     ) -> pd.DataFrame:
         """
-        Fetch historical price data from Polygon.io.
-        
-        Args:
-            symbol: The stock symbol
-            interval: Time interval between data points ('1d', '1h', etc.)
-            start_date: Start date for historical data
-            end_date: End date for historical data
-            
-        Returns:
-            DataFrame with historical price data
+        FIXED: Fetch historical price data from Polygon.io with correct date handling.
         """
-        # Default date range if not provided
+        # FIXED: Proper date range handling
         if end_date is None:
             end_date = datetime.now()
         elif isinstance(end_date, str):
@@ -113,6 +109,16 @@ class PolygonAPI(MarketDataFetcher):
             start_date = end_date - timedelta(days=365)  # Default 1 year
         elif isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
+        
+        # CRITICAL FIX: Ensure we don't request future dates
+        today = datetime.now()
+        if end_date > today:
+            end_date = today
+            logger.info(f"Adjusted end_date to today: {end_date.strftime('%Y-%m-%d')}")
+        
+        if start_date > today:
+            start_date = today - timedelta(days=365)
+            logger.info(f"Adjusted start_date to avoid future dates: {start_date.strftime('%Y-%m-%d')}")
         
         # Format dates for Polygon API (YYYY-MM-DD)
         start_str = start_date.strftime('%Y-%m-%d')
@@ -142,23 +148,30 @@ class PolygonAPI(MarketDataFetcher):
         params = {
             "adjusted": "true",
             "sort": "asc",
-            "limit": 50000,  # Max limit
+            "limit": 50000,
             "apikey": self.api_key
         }
         
         logger.info(f"Fetching {interval} data for {symbol} from Polygon.io")
+        logger.info(f"Date range: {start_str} to {end_str}")
         
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
             
             data = response.json()
             
-            # Check for errors
-            if data.get("status") != "OK":
-                error_message = data.get("error", "Unknown error")
-                logger.error(f"Polygon API error: {error_message}")
+            # FIXED: Accept both "OK" and "DELAYED" status
+            status = data.get("status")
+            if status not in ["OK", "DELAYED"]:
+                error_message = data.get("error", f"API returned status: {status}")
+                message = data.get("message", "No additional message")
+                logger.error(f"Polygon API error - Status: {status}, Error: {error_message}, Message: {message}")
                 return pd.DataFrame()
+            
+            # Log if data is delayed but proceed anyway
+            if status == "DELAYED":
+                logger.warning(f"Polygon data is delayed but proceeding with {symbol}")
             
             # Extract results
             results = data.get("results", [])
@@ -171,11 +184,11 @@ class PolygonAPI(MarketDataFetcher):
             for result in results:
                 df_data.append({
                     "open": result.get("o"),
-                    "high": result.get("h"),
+                    "high": result.get("h"), 
                     "low": result.get("l"),
                     "close": result.get("c"),
                     "volume": result.get("v"),
-                    "timestamp": pd.to_datetime(result.get("t"), unit='ms')  # Polygon uses milliseconds
+                    "timestamp": pd.to_datetime(result.get("t"), unit='ms')
                 })
             
             df = pd.DataFrame(df_data)
@@ -186,7 +199,13 @@ class PolygonAPI(MarketDataFetcher):
             for col in ["open", "high", "low", "close", "volume"]:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
             
+            # ADDITIONAL FIX: Filter out any future dates that might slip through
+            today = pd.Timestamp.now()
+            df = df[df.index <= today]
+            
             logger.info(f"Successfully fetched {len(df)} data points for {symbol}")
+            logger.info(f"Date range in data: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+            
             return df
         
         except requests.exceptions.RequestException as e:
@@ -198,15 +217,8 @@ class PolygonAPI(MarketDataFetcher):
     
     def fetch_latest_price(self, symbol: str) -> Dict[str, Any]:
         """
-        Fetch latest price for a stock from Polygon.io.
-        
-        Args:
-            symbol: The stock symbol
-            
-        Returns:
-            Dictionary with latest price information
+        FIXED: Fetch latest price for a stock from Polygon.io.
         """
-        # Use the previous close endpoint for latest price
         url = f"{self.BASE_URL}/v2/aggs/ticker/{symbol}/prev"
         
         params = {
@@ -217,14 +229,16 @@ class PolygonAPI(MarketDataFetcher):
         logger.info(f"Fetching latest price for {symbol} from Polygon.io")
         
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
             
             data = response.json()
             
-            if data.get("status") != "OK":
-                error_message = data.get("error", "Unknown error")
-                logger.error(f"Polygon API error: {error_message}")
+            # FIXED: Accept both "OK" and "DELAYED" status
+            status = data.get("status")
+            if status not in ["OK", "DELAYED"]:
+                error_message = data.get("error", f"API returned status: {status}")
+                logger.error(f"Polygon latest price error: {error_message}")
                 return {}
             
             results = data.get("results", [])
@@ -236,7 +250,7 @@ class PolygonAPI(MarketDataFetcher):
             
             latest_price = {
                 "symbol": symbol,
-                "price": float(result.get("c", 0)),  # close price
+                "price": float(result.get("c", 0)),
                 "open": float(result.get("o", 0)),
                 "high": float(result.get("h", 0)),
                 "low": float(result.get("l", 0)),
@@ -246,13 +260,9 @@ class PolygonAPI(MarketDataFetcher):
             
             return latest_price
         
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Error fetching latest price from Polygon.io: {e}")
             return {}
-        except Exception as e:
-            logger.error(f"Unexpected error fetching latest price from Polygon.io: {e}")
-            return {}
-
 
 class AlphaVantageAPI(MarketDataFetcher):
     """Implementation for Alpha Vantage API."""

@@ -53,7 +53,7 @@ class StandardizedHypothesisTestingFramework:
             'start_date': '2024-01-01',
             'end_date': '2024-12-31', 
             'initial_capital': 10000,
-            'data_source': 'alpha_vantage'  # Primary source for consistency
+            'data_source': 'polygon'  # Primary source for consistency
         }
         
         self.test_data_2024 = None
@@ -72,14 +72,26 @@ class StandardizedHypothesisTestingFramework:
         
         if PROJECT_AVAILABLE:
             try:
-                # Use Alpha Vantage first for consistency
-                api = get_data_api("alpha_vantage")
-                full_data = api.fetch_historical_data(self.STANDARD_CONFIG['test_symbol'], "1d")
+                # NEW: Try Polygon first (professional grade like Alpha Vantage)
+                api = get_data_api("polygon")
+                full_data = api.fetch_historical_data(
+                    self.STANDARD_CONFIG['test_symbol'], 
+                    "1d",
+                    start_date=self.STANDARD_CONFIG['start_date'],  # Should be '2024-01-01'
+                    end_date=self.STANDARD_CONFIG['end_date']       # Should be '2024-12-31'
+                )
                 
                 if full_data is None or full_data.empty:
-                    print("⚠️ Alpha Vantage failed, trying Yahoo Finance...")
-                    api = get_data_api("yahoo_finance")
+                    print("⚠️ Polygon failed, trying Alpha Vantage...")
+                    # Use Alpha Vantage second
+                    api = get_data_api("alpha_vantage")
                     full_data = api.fetch_historical_data(self.STANDARD_CONFIG['test_symbol'], "1d")
+                    
+                    if full_data is None or full_data.empty:
+                        print("⚠️ Alpha Vantage failed, trying Yahoo Finance...")
+                        api = get_data_api("yahoo_finance")
+                        full_data = api.fetch_historical_data(self.STANDARD_CONFIG['test_symbol'], "1d")
+                
                 
                 if full_data is not None and not full_data.empty:
                     # Filter for EXACT 2024 period
@@ -175,7 +187,7 @@ class StandardizedHypothesisTestingFramework:
             data = self.test_data_2024.copy()
             
             # Test your ML strategy with CURRENT settings (no modifications)
-            strategy = MLTradingStrategy(confidence_threshold=0.40)
+            strategy = MLTradingStrategy(confidence_threshold=0.45)
             results = self._backtest_strategy_standardized(strategy, data, "Your AI System")
             
             print(f"✅ YOUR AI SYSTEM Results (2024 STANDARDIZED):")
