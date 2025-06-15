@@ -10,9 +10,9 @@ from .strategies import (
     MLTradingStrategy, 
     TechnicalAnalysisStrategy, 
     BuyAndHoldStrategy,
-    MeanReversionStrategy,
-    MomentumStrategy,
-    TradingStrategy
+    TradingStrategy,
+    RSIDivergenceStrategy,      # NEW: Add RSI Divergence Strategy
+    HybridRSIDivergenceStrategy,
 )
 from .portfolio import Portfolio
 from .metrics import PerformanceMetrics
@@ -22,11 +22,11 @@ __all__ = [
     'MLTradingStrategy',
     'TechnicalAnalysisStrategy', 
     'BuyAndHoldStrategy',
-    'MeanReversionStrategy',
-    'MomentumStrategy',
     'TradingStrategy',
     'Portfolio',
-    'PerformanceMetrics'
+    'PerformanceMetrics',
+    'RSIDivergenceStrategy',      # NEW
+    'HybridRSIDivergenceStrategy'
 ]
 
 # Version info
