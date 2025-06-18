@@ -1,12 +1,13 @@
 """
 HYPOTHESIS TESTING: 1 Stock, 1 Year
-Testing framework for comparing trading strategies on single asset over full year
+Testing framework using reusable hypothesis_framework module
 
 Configuration:
-- Asset: MSFT
+- Asset: MSFT  
 - Period: 2024 (12 months)
 - Strategies: Individual + Split-Capital Multi-Strategy
 - Capital: $10,000
+- Benchmarks: Complete H1-H4 framework
 """
 
 import sys
@@ -25,6 +26,16 @@ warnings.filterwarnings('ignore')
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 sys.path.insert(0, project_root)
+
+# Import reusable framework
+from hypothesis_framework import (
+    add_benchmarks_to_results,
+    add_hypothesis_test_analysis, 
+    get_test_description,
+    get_date_range_for_test,
+    get_assets_for_test,
+    calculate_time_period_months
+)
 
 try:
     from src.backtesting import (
@@ -47,71 +58,77 @@ class Hypothesis1Stock1Year:
     """Hypothesis testing framework: 1 Stock, 1 Year"""
     
     def __init__(self):
-        self.results = {}
-        self.backtester_signals = {}
-        self.trade_history = {}
+        # Test configuration using framework
+        self.test_type = '1stock_1year'
+        start_date, end_date = get_date_range_for_test(self.test_type)
+        assets = get_assets_for_test(self.test_type)
         
-        # Test configuration
         self.TEST_CONFIG = {
-            'test_name': '1 Stock, 1 Year',
-            'test_symbol': 'MSFT',
-            'start_date': '2024-01-01',
-            'end_date': '2024-12-31',
+            'test_name': get_test_description(self.test_type),
+            'test_symbols': assets,
+            'start_date': start_date,
+            'end_date': end_date,
             'initial_capital': 10000,
             'transaction_cost': 0.001,
             'max_position_size': 1.0,
-            'data_source': 'polygon'
+            'time_months': calculate_time_period_months(self.test_type)
         }
         
-        self.test_data = None
-        print("🎯 HYPOTHESIS TESTING: 1 Stock, 1 Year")
-        print("=" * 50)
-        print(f"Asset: {self.TEST_CONFIG['test_symbol']}")
+        self.results = {}
+        self.backtester_signals = {}
+        self.trade_history = {}
+        self.test_data = {}
+        
+        print(f"🎯 HYPOTHESIS TESTING: {self.TEST_CONFIG['test_name']}")
+        print("=" * 60)
+        print(f"Assets: {', '.join(self.TEST_CONFIG['test_symbols'])}")
         print(f"Period: {self.TEST_CONFIG['start_date']} to {self.TEST_CONFIG['end_date']}")
         print(f"Capital: ${self.TEST_CONFIG['initial_capital']:,}")
-        print(f"Test: Single asset over full year")
     
     def load_test_data(self):
-        """Load test data for the specified period"""
-        print(f"\n📊 Loading test data for {self.TEST_CONFIG['test_name']}...")
+        """Load test data for specified assets and period"""
+        print(f"\n📊 Loading test data...")
         
-        try:
-            if PROJECT_AVAILABLE:
-                api = get_data_api("polygon")
-                data = api.fetch_historical_data(
-                    self.TEST_CONFIG['test_symbol'], 
-                    "1d",
-                    start_date=self.TEST_CONFIG['start_date'],
-                    end_date=self.TEST_CONFIG['end_date']
-                )
+        success_count = 0
+        for symbol in self.TEST_CONFIG['test_symbols']:
+            try:
+                print(f"   Loading {symbol}...")
                 
-                if data is not None and not data.empty:
-                    self.test_data = TechnicalIndicators.add_all_indicators(data)
-                    print(f"✅ Loaded {len(self.test_data)} days from project API")
-                    return True
-            
-            # Fallback to yfinance
-            print("   Trying Yahoo Finance fallback...")
-            ticker = yf.Ticker(self.TEST_CONFIG['test_symbol'])
-            data = ticker.history(
-                start=self.TEST_CONFIG['start_date'],
-                end=self.TEST_CONFIG['end_date'],
-                interval='1d'
-            )
-            
-            if not data.empty:
-                data.columns = [col.lower() for col in data.columns]
-                data = data.rename(columns={'adj close': 'adj_close'})
-                self.test_data = TechnicalIndicators.add_all_indicators(data)
-                print(f"✅ Loaded {len(self.test_data)} days from Yahoo Finance")
-                return True
-                
-        except Exception as e:
-            print(f"❌ Error loading data: {e}")
-            return False
+                if PROJECT_AVAILABLE:
+                    api = get_data_api("polygon")
+                    data = api.fetch_historical_data(
+                        symbol, "1d",
+                        start_date=self.TEST_CONFIG['start_date'],
+                        end_date=self.TEST_CONFIG['end_date']
+                    )
+                    
+                    if data is not None and not data.empty:
+                        self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
+                        print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days")
+                        success_count += 1
+                    else:
+                        # Fallback to yfinance
+                        print(f"      Trying Yahoo Finance for {symbol}...")
+                        ticker = yf.Ticker(symbol)
+                        data = ticker.history(
+                            start=self.TEST_CONFIG['start_date'],
+                            end=self.TEST_CONFIG['end_date'],
+                            interval='1d'
+                        )
+                        if not data.empty:
+                            data.columns = [col.lower() for col in data.columns]
+                            data = data.rename(columns={'adj close': 'adj_close'})
+                            self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
+                            print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days (fallback)")
+                            success_count += 1
+                        else:
+                            print(f"      ❌ {symbol}: Failed to load data")
+                            
+            except Exception as e:
+                print(f"      ❌ {symbol}: Error loading data - {e}")
         
-        print("❌ No data available")
-        return False
+        print(f"\n📈 Successfully loaded {success_count}/{len(self.TEST_CONFIG['test_symbols'])} assets")
+        return success_count > 0
     
     def test_individual_strategies(self):
         """Test individual strategies"""
@@ -120,6 +137,12 @@ class Hypothesis1Stock1Year:
         
         if not PROJECT_AVAILABLE:
             print("❌ Project strategies not available")
+            return
+        
+        # Use first (primary) asset for single stock test
+        primary_symbol = self.TEST_CONFIG['test_symbols'][0]
+        if primary_symbol not in self.test_data:
+            print(f"❌ No data for {primary_symbol}")
             return
         
         strategies_to_test = [
@@ -138,15 +161,21 @@ class Hypothesis1Stock1Year:
         ]
         
         for strategy, name in strategies_to_test:
-            self._test_strategy_with_tracking(strategy, name)
+            self._test_strategy_with_tracking(strategy, name, self.test_data[primary_symbol])
     
     def test_split_capital_strategy(self):
         """Test Split-Capital Multi-Strategy"""
         print(f"\n🏆 Testing Split-Capital Multi-Strategy")
         print("-" * 45)
         
-        if not PROJECT_AVAILABLE or self.test_data is None:
+        if not PROJECT_AVAILABLE:
             print("❌ Cannot run Split-Capital Multi-Strategy test")
+            return None
+        
+        # Use first asset for single stock test
+        primary_symbol = self.TEST_CONFIG['test_symbols'][0]
+        if primary_symbol not in self.test_data:
+            print(f"❌ No data for {primary_symbol}")
             return None
         
         try:
@@ -156,12 +185,12 @@ class Hypothesis1Stock1Year:
             }
             
             runner = UltimatePortfolioRunner(
-                assets=[self.TEST_CONFIG['test_symbol']],
+                assets=[primary_symbol],
                 initial_capital=self.TEST_CONFIG['initial_capital']
             )
             
             results = runner.run_ultimate_portfolio_test(
-                data=self.test_data,
+                data=self.test_data[primary_symbol],
                 backtester_class=ProductionBacktester,
                 strategy_classes=strategy_classes
             )
@@ -177,9 +206,12 @@ class Hypothesis1Stock1Year:
             if not trades_df.empty:
                 self.trade_history[strategy_name] = trades_df
             
+            time_months = self.TEST_CONFIG['time_months']
+            monthly_freq = results['total_trades'] / time_months
+            
             print(f"✅ Split-Capital Multi-Strategy completed")
             print(f"   Return: {results['total_return']*100:+.2f}%")
-            print(f"   Trades: {results['total_trades']}")
+            print(f"   Trades: {results['total_trades']} ({monthly_freq:.1f}/month)")
             
             return results
             
@@ -187,7 +219,7 @@ class Hypothesis1Stock1Year:
             print(f"❌ Error running Split-Capital Multi-Strategy: {e}")
             return None
     
-    def _test_strategy_with_tracking(self, strategy, name):
+    def _test_strategy_with_tracking(self, strategy, name, data):
         """Test strategy with signal and trade tracking"""
         try:
             print(f"   Testing {name}...")
@@ -199,7 +231,7 @@ class Hypothesis1Stock1Year:
             )
             
             backtester.set_strategy(strategy)
-            results = backtester.run_backtest(self.test_data)
+            results = backtester.run_backtest(data)
             results['strategy_name'] = name
             
             # Store results and tracking data
@@ -207,58 +239,21 @@ class Hypothesis1Stock1Year:
             self.backtester_signals[name] = backtester.get_signals_history()
             self.trade_history[name] = backtester.get_trade_history()
             
+            # Calculate time-based metrics
+            time_months = self.TEST_CONFIG['time_months']
+            monthly_trades = results['total_trades'] / time_months
+            
             print(f"      Return: {results['total_return']:.2%}")
-            print(f"      Trades: {results['total_trades']}")
+            print(f"      Trades: {results['total_trades']} ({monthly_trades:.1f}/month)")
             print(f"      Win Rate: {results.get('win_rate', 0):.1%}")
             
         except Exception as e:
             print(f"      ❌ Failed: {e}")
     
-    def add_benchmark_strategies(self):
-        """Add benchmark strategies (MSFT-compatible only)"""
-        print(f"\n🏆 Adding Benchmark Strategies (MSFT 2024 Compatible)")
-        print("-" * 55)
-        
-        # Only include benchmarks that are valid for MSFT 2024 comparison
-        self.results['H1: TradingView Strategy'] = {
-            'strategy_name': 'H1: TradingView Strategy',
-            'total_return': 0.3539, 'total_trades': 92, 'win_rate': 64.13,
-            'sharpe_ratio': -0.263, 'data_source': 'REAL TRADINGVIEW STRATEGY (MSFT 2024)'
-        }
-        
-        self.results['H1: Systematic Strategy'] = {
-            'strategy_name': 'H1: Systematic Strategy',
-            'total_return': 0.0429, 'total_trades': 12, 'win_rate': 58.0,
-            'sharpe_ratio': 0.67, 'data_source': 'REAL SYSTEMATIC STRATEGY (MSFT 2024)'
-        }
-        
-        # Market-wide benchmarks (not asset-specific)
-        self.results['H2: Cathie Wood (ARKK)'] = {
-            'strategy_name': 'H2: Cathie Wood (ARKK)',
-            'total_return': 0.1408, 'total_trades': 156, 'win_rate': 52.0,
-            'sharpe_ratio': 0.3936, 'data_source': 'REAL ARKK ETF DATA (Market-wide)'
-        }
-        
-        self.results['H3: AI ETF (QQQ)'] = {
-            'strategy_name': 'H3: AI ETF (QQQ)',
-            'total_return': 0.2883, 'total_trades': 100, 'win_rate': 58.0,
-            'sharpe_ratio': 1.6052, 'data_source': 'REAL QQQ ETF DATA (Market-wide)'
-        }
-        
-        self.results['H4: Beginner Trader'] = {
-            'strategy_name': 'H4: Beginner Trader',
-            'total_return': -0.15, 'total_trades': 67, 'win_rate': 41.0,
-            'sharpe_ratio': -0.23, 'data_source': 'ACADEMIC STUDY (General)'
-        }
-        
-        print("✅ MSFT-compatible benchmark strategies added")
-        print("⚠️  Note: H1 benchmarks are MSFT 2024-specific")
-        print("✅ H2, H3, H4 benchmarks are market-wide references")
-    
     def generate_analysis(self):
-        """Generate comprehensive analysis"""
+        """Generate comprehensive analysis using framework"""
         print(f"\n📊 ANALYSIS: {self.TEST_CONFIG['test_name']}")
-        print("=" * 50)
+        print("=" * 60)
         
         if not self.results:
             print("❌ No results available")
@@ -274,42 +269,35 @@ class Hypothesis1Stock1Year:
         print(f"\n🏆 STRATEGY PERFORMANCE RANKING:")
         print("-" * 50)
         
+        time_months = self.TEST_CONFIG['time_months']
+        
         for i, (name, data) in enumerate(sorted_results, 1):
             return_pct = data['total_return'] * 100
             trades = data.get('total_trades', 0)
             win_rate = data.get('win_rate', 0)
+            monthly_trades = trades / time_months
             
             print(f"{i:2d}. {name}")
-            print(f"    Return: {return_pct:+7.2f}% | Trades: {trades:3d} | Win Rate: {win_rate:5.1f}%")
+            print(f"    Return: {return_pct:+7.2f}% | Trades: {trades:3d} ({monthly_trades:.1f}/mo) | Win Rate: {win_rate:5.1f}%")
         
-        # Find Split-Capital Multi-Strategy
-        split_capital_result = None
-        for name, data in self.results.items():
-            if "Split-Capital" in name:
-                split_capital_result = data
-                break
-        
-        if split_capital_result:
-            split_rank = next((i for i, (name, _) in enumerate(sorted_results, 1) if "Split-Capital" in name), 0)
-            print(f"\n🏆 SPLIT-CAPITAL MULTI-STRATEGY ANALYSIS:")
-            print(f"   Ranking: #{split_rank} out of {len(sorted_results)} strategies")
-            print(f"   Return: {split_capital_result['total_return']:.2%}")
-            print(f"   Trades: {split_capital_result['total_trades']}")
-            print(f"   Configuration: {self.TEST_CONFIG['test_symbol']} over {self.TEST_CONFIG['test_name']}")
+        # Use framework for hypothesis analysis
+        add_hypothesis_test_analysis(self.results, "Split-Capital Multi-Strategy")
     
     def create_visualization(self):
         """Create visualization for this test configuration"""
-        if self.test_data is None:
+        primary_symbol = self.TEST_CONFIG['test_symbols'][0]
+        if primary_symbol not in self.test_data:
             print("❌ No data available for visualization")
             return
         
-        print(f"\n📈 Creating visualization for {self.TEST_CONFIG['test_name']}...")
+        print(f"\n📈 Creating visualization...")
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 14), height_ratios=[3, 1])
         
         # Plot price
-        ax1.plot(self.test_data.index, self.test_data['close'], 
-                label=f"{self.TEST_CONFIG['test_symbol']} Price", linewidth=2, color='black', alpha=0.7)
+        data = self.test_data[primary_symbol]
+        ax1.plot(data.index, data['close'], 
+                label=f"{primary_symbol} Price", linewidth=2, color='black', alpha=0.7)
         
         # Plot key strategies
         key_strategies = ['MLTrading Strategy', 'Technical Analysis Strategy', 'Split-Capital Multi-Strategy']
@@ -336,7 +324,7 @@ class Hypothesis1Stock1Year:
                               color='white', marker=marker, s=80, alpha=0.9, 
                               label=f'{strategy} SELL', edgecolors=color, linewidth=2.5)
         
-        ax1.set_title(f'{self.TEST_CONFIG["test_name"]}: {self.TEST_CONFIG["test_symbol"]} Trading Strategies', 
+        ax1.set_title(f'{self.TEST_CONFIG["test_name"]}: Trading Strategies', 
                      fontsize=16, fontweight='bold')
         ax1.set_ylabel('Price ($)', fontsize=14)
         ax1.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
@@ -363,7 +351,7 @@ class Hypothesis1Stock1Year:
             ax2.set_yticks(range(len(strategy_names)))
             ax2.set_yticklabels(strategy_names, fontsize=10)
             ax2.set_xlabel('Return (%)', fontsize=12)
-            ax2.set_title(f'{self.TEST_CONFIG["test_name"]} - Strategy Performance Comparison', fontsize=12)
+            ax2.set_title(f'{self.TEST_CONFIG["test_name"]} - Performance Comparison', fontsize=12)
             ax2.grid(True, alpha=0.3, axis='x')
             ax2.axvline(x=0, color='black', linewidth=1, alpha=0.5)
         
@@ -371,7 +359,7 @@ class Hypothesis1Stock1Year:
         
         # Save to results folder
         os.makedirs('comparison_tests_results', exist_ok=True)
-        filename = f'comparison_tests_results/visualization_1stock_1year_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        filename = f'comparison_tests_results/visualization_{self.test_type}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         plt.show()
         
@@ -382,16 +370,17 @@ class Hypothesis1Stock1Year:
         os.makedirs('comparison_tests_results', exist_ok=True)
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'comparison_tests_results/results_1stock_1year_{timestamp}.txt'
+        filename = f'comparison_tests_results/results_{self.test_type}_{timestamp}.txt'
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write("HYPOTHESIS TESTING RESULTS: 1 Stock, 1 Year\n")
-            f.write("=" * 50 + "\n")
+            f.write(f"HYPOTHESIS TESTING RESULTS: {self.TEST_CONFIG['test_name']}\n")
+            f.write("=" * 70 + "\n")
             f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Test Configuration: {self.TEST_CONFIG['test_name']}\n")
-            f.write(f"Asset: {self.TEST_CONFIG['test_symbol']}\n")
+            f.write(f"Test Configuration: {self.test_type}\n")
+            f.write(f"Assets: {', '.join(self.TEST_CONFIG['test_symbols'])}\n")
             f.write(f"Period: {self.TEST_CONFIG['start_date']} to {self.TEST_CONFIG['end_date']}\n")
-            f.write(f"Capital: ${self.TEST_CONFIG['initial_capital']:,}\n\n")
+            f.write(f"Capital: ${self.TEST_CONFIG['initial_capital']:,}\n")
+            f.write(f"Duration: {self.TEST_CONFIG['time_months']} months\n\n")
             
             # Write all results
             for name, data in self.results.items():
@@ -411,9 +400,14 @@ class Hypothesis1Stock1Year:
         
         print(f"\n🚀 Running {self.TEST_CONFIG['test_name']} tests...")
         
+        # Test strategies
         self.test_individual_strategies()
         self.test_split_capital_strategy()
-        self.add_benchmark_strategies()
+        
+        # Add benchmarks using framework
+        add_benchmarks_to_results(self.results, self.test_type)
+        
+        # Generate analysis
         self.generate_analysis()
         self.create_visualization()
         results_file = self.save_results()
