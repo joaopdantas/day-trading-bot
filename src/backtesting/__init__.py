@@ -12,9 +12,15 @@ from .strategies import (
     BuyAndHoldStrategy,
     TradingStrategy,
     RSIDivergenceStrategy,      # NEW: Add RSI Divergence Strategy
-    HybridRSIDivergenceStrategy,
+    HybridRSIDivergenceStrategy
 )
 from .portfolio import Portfolio
+from .portfolio_manager import (
+    PortfolioManager,
+    UltimatePortfolioRunner,
+    create_default_strategy_config,
+    create_multi_asset_strategy_config,
+)
 from .metrics import PerformanceMetrics
 
 __all__ = [
@@ -26,7 +32,11 @@ __all__ = [
     'Portfolio',
     'PerformanceMetrics',
     'RSIDivergenceStrategy',      # NEW
-    'HybridRSIDivergenceStrategy'
+    'HybridRSIDivergenceStrategy',
+    'PortfolioManager',
+    'UltimatePortfolioRunner',
+    'create_default_strategy_config',
+    'create_multi_asset_strategy_config',
 ]
 
 # Version info

@@ -4,7 +4,7 @@ FINAL FIXED strategies.py - Correcting Buy & Hold and Signal Logic
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from abc import ABC, abstractmethod
 import logging
 
@@ -472,141 +472,6 @@ class BuyAndHoldStrategy(TradingStrategy):
             'ignore_take_profit': True,  # Ignore take profits
             'buy_and_hold': True  # Flag for backtester
         }
-
-
-class MeanReversionStrategy(TradingStrategy):
-    """Mean reversion strategy using Bollinger Bands"""
-    
-    def __init__(self, bb_period: int = 20, bb_std: float = 2.0, rsi_period: int = 14, hold_period: int = 5):
-        self.bb_period = bb_period
-        self.bb_std = bb_std
-        self.rsi_period = rsi_period
-        self.hold_period = hold_period
-        self.position = None
-        self.hold_counter = 0
-    
-    def reset(self):
-        self.position = None
-        self.hold_counter = 0
-    
-    def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        signal = {
-            'action': 'HOLD',
-            'confidence': 0.5,
-            'symbol': 'STOCK',
-            'reasoning': []
-        }
-        
-        try:
-            bb_position = current_data.get('bb_position', 0.5)
-            rsi = current_data.get('rsi', 50)
-            price = current_data.get('close', 0)
-            
-            if self.position:
-                self.hold_counter += 1
-            
-            # Buy when very oversold
-            if bb_position < 0.1 and rsi < 35:
-                if not self.position:
-                    signal['action'] = 'BUY'
-                    signal['confidence'] = 0.8
-                    signal['reasoning'].append('Mean reversion BUY: very oversold conditions')
-                    self.position = 'LONG'
-                    self.hold_counter = 0
-                    logger.info(f"🟢 MEAN REVERSION BUY at ${price:.2f} (BB: {bb_position:.2f}, RSI: {rsi:.1f})")
-            
-            # Sell when very overbought
-            elif bb_position > 0.9 and rsi > 65:
-                if self.position == 'LONG':
-                    signal['action'] = 'SELL'
-                    signal['confidence'] = 0.8
-                    signal['reasoning'].append('Mean reversion SELL: very overbought conditions')
-                    self.position = None
-                    self.hold_counter = 0
-                    logger.info(f"🔴 MEAN REVERSION SELL at ${price:.2f} (BB: {bb_position:.2f}, RSI: {rsi:.1f})")
-            
-            # Exit conditions
-            elif self.position and self.hold_counter >= self.hold_period:
-                if self.position == 'LONG' and bb_position > 0.6:
-                    signal['action'] = 'SELL'
-                    signal['confidence'] = 0.7
-                    signal['reasoning'].append('Mean reversion exit: moved away from oversold')
-                    self.position = None
-                    self.hold_counter = 0
-                    logger.info(f"🔴 MEAN REVERSION EXIT at ${price:.2f}")
-            
-            if not signal['reasoning']:
-                signal['reasoning'].append('Mean reversion: waiting for extreme conditions')
-        
-        except Exception as e:
-            logger.error(f"Mean reversion strategy error: {e}")
-            signal['reasoning'].append(f'Error: {str(e)}')
-        
-        return signal
-
-
-class MomentumStrategy(TradingStrategy):
-    """Momentum strategy"""
-    
-    def __init__(self, lookback_period: int = 20, breakout_threshold: float = 0.02, volume_confirmation: bool = True):
-        self.lookback_period = lookback_period
-        self.breakout_threshold = breakout_threshold
-        self.volume_confirmation = volume_confirmation
-        self.position = None
-    
-    def reset(self):
-        self.position = None
-    
-    def generate_signal(self, current_data: pd.Series, historical_data: pd.DataFrame) -> Dict:
-        signal = {
-            'action': 'HOLD',
-            'confidence': 0.5,
-            'symbol': 'STOCK',
-            'reasoning': []
-        }
-        
-        try:
-            if len(historical_data) < self.lookback_period:
-                signal['reasoning'].append('Insufficient data for momentum')
-                return signal
-            
-            recent_data = historical_data.tail(self.lookback_period)
-            current_price = current_data['close']
-            start_price = recent_data['close'].iloc[0]
-            price_change = (current_price - start_price) / start_price
-            
-            volume_confirmed = True
-            if self.volume_confirmation:
-                avg_volume = recent_data['volume'].mean()
-                current_volume = current_data.get('volume', avg_volume)
-                volume_confirmed = current_volume > avg_volume * 1.2
-            
-            # Buy on upward breakouts
-            if price_change > self.breakout_threshold and volume_confirmed:
-                if not self.position:
-                    signal['action'] = 'BUY'
-                    signal['confidence'] = min(abs(price_change) * 10, 0.9)
-                    signal['reasoning'].append(f'Upward breakout: {price_change:.2%} with volume')
-                    self.position = 'LONG'
-                    logger.info(f"🟢 MOMENTUM BUY: {price_change:.2%} breakout at ${current_price:.2f}")
-            
-            # Sell on downward breakouts
-            elif price_change < -self.breakout_threshold and volume_confirmed:
-                if self.position == 'LONG':
-                    signal['action'] = 'SELL'
-                    signal['confidence'] = min(abs(price_change) * 10, 0.9)
-                    signal['reasoning'].append(f'Downward breakout: {price_change:.2%} with volume')
-                    self.position = None
-                    logger.info(f"🔴 MOMENTUM SELL: {price_change:.2%} breakdown at ${current_price:.2f}")
-            
-            if not signal['reasoning']:
-                signal['reasoning'].append('Momentum: no clear breakout signal')
-        
-        except Exception as e:
-            logger.error(f"Momentum strategy error: {e}")
-            signal['reasoning'].append(f'Error: {str(e)}')
-        
-        return signal
     
 class RSIDivergenceStrategy(TradingStrategy):
     """
@@ -866,3 +731,5 @@ class HybridRSIDivergenceStrategy(TradingStrategy):
         
         return combined_signal
     
+
+   
