@@ -1,14 +1,14 @@
 """
-HYPOTHESIS TESTING: Multiple Stocks, 2 Months
+HYPOTHESIS TESTING: Multiple Stocks, 3 Months
 Testing framework using reusable hypothesis_framework module
 
 Configuration:
-- Assets: MSFT, AAPL, GOOGL, AMZN, TSLA
-- Period: 2 months (Nov-Dec 2024)
+- Assets: MSFT, AAPL, GOOGL, AMZN, TSLA (NVDA removed for consistency)
+- Period: Q4 2024 (3 months: October-December)
 - Strategies: Individual + Split-Capital Multi-Strategy
 - Capital: $10,000
-- Benchmarks: Complete H1-H4 framework
-- ULTIMATE CHALLENGE: Maximum difficulty testing
+- Benchmarks: Complete H1-H4 framework (period-adjusted)
+- MINIMUM VIABLE PERIOD: 3 months is the minimum acceptable testing period
 """
 
 import sys
@@ -54,13 +54,12 @@ except ImportError as e:
     print(f"❌ Project modules not available: {e}")
     PROJECT_AVAILABLE = False
 
-
-class HypothesisMultiStocks2Months:
-    """Hypothesis testing framework: Multiple Stocks, 2 Months - ULTIMATE CHALLENGE"""
+class HypothesisMultiStocks3Months:
+    """Hypothesis testing framework: Multiple Stocks, 3 Months - MINIMUM VIABLE PERIOD"""
     
     def __init__(self):
         # Test configuration using framework
-        self.test_type = 'multistocks_2months'
+        self.test_type = 'multistocks_3months'
         start_date, end_date = get_date_range_for_test(self.test_type)
         assets = get_assets_for_test(self.test_type)
         
@@ -80,13 +79,12 @@ class HypothesisMultiStocks2Months:
         self.trade_history = {}
         self.test_data = {}
         
-        print(f"🎯 HYPOTHESIS TESTING: {self.TEST_CONFIG['test_name']} 🔥")
+        print(f"🎯 HYPOTHESIS TESTING: {self.TEST_CONFIG['test_name']} 📊")
         print("=" * 60)
-        print(f"🔥 ULTIMATE CHALLENGE: Maximum difficulty testing!")
+        print(f"📈 MINIMUM VIABLE PERIOD: 3 months testing!")
         print(f"Assets: {', '.join(self.TEST_CONFIG['test_symbols'])}")
         print(f"Period: {self.TEST_CONFIG['start_date']} to {self.TEST_CONFIG['end_date']}")
         print(f"Capital: ${self.TEST_CONFIG['initial_capital']:,}")
-        print("=" * 60)
     
     def load_test_data(self):
         """Load test data for specified assets and period"""
@@ -98,67 +96,146 @@ class HypothesisMultiStocks2Months:
                 print(f"   Loading {symbol}...")
                 
                 if PROJECT_AVAILABLE:
-                    api = get_data_api("polygon")
-                    data = api.fetch_historical_data(
-                        symbol, "1d",
-                        start_date=self.TEST_CONFIG['start_date'],
-                        end_date=self.TEST_CONFIG['end_date']
-                    )
-                    
-                    if data is not None and not data.empty:
-                        self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
-                        print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days")
-                        success_count += 1
-                    else:
-                        # Fallback to yfinance
-                        print(f"      Trying Yahoo Finance for {symbol}...")
-                        ticker = yf.Ticker(symbol)
-                        data = ticker.history(
-                            start=self.TEST_CONFIG['start_date'],
-                            end=self.TEST_CONFIG['end_date'],
-                            interval='1d'
+                    # TRY 1: Polygon API (primary)
+                    try:
+                        api = get_data_api("polygon")
+                        data = api.fetch_historical_data(
+                            symbol, "1d",
+                            start_date=self.TEST_CONFIG['start_date'],
+                            end_date=self.TEST_CONFIG['end_date']
                         )
-                        if not data.empty:
-                            data.columns = [col.lower() for col in data.columns]
-                            data = data.rename(columns={'adj close': 'adj_close'})
+                        
+                        if data is not None and not data.empty:
                             self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
-                            print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days (fallback)")
+                            print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days (Polygon)")
                             success_count += 1
+                            continue
                         else:
-                            print(f"      ❌ {symbol}: Failed to load data")
-                            
+                            print(f"      ⚠️ Polygon returned empty data for {symbol}")
+                    except Exception as e:
+                        print(f"      ⚠️ Polygon API failed for {symbol}: {e}")
+                    
+                    # TRY 2: Alpha Vantage API (backup)
+                    try:
+                        print(f"      Trying Alpha Vantage for {symbol}...")
+                        api = get_data_api("alpha_vantage")
+                        data = api.fetch_historical_data(
+                            symbol, "1d",
+                            start_date=self.TEST_CONFIG['start_date'],
+                            end_date=self.TEST_CONFIG['end_date']
+                        )
+                        
+                        if data is not None and not data.empty:
+                            self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
+                            print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days (Alpha Vantage)")
+                            success_count += 1
+                            continue
+                        else:
+                            print(f"      ⚠️ Alpha Vantage returned empty data for {symbol}")
+                    except Exception as e:
+                        print(f"      ⚠️ Alpha Vantage API failed for {symbol}: {e}")
+                
+                # TRY 3: Yahoo Finance (always available)
+                print(f"      Trying Yahoo Finance for {symbol}...")
+                ticker = yf.Ticker(symbol)
+                data = ticker.history(
+                    start=self.TEST_CONFIG['start_date'],
+                    end=self.TEST_CONFIG['end_date'],
+                    interval='1d'
+                )
+                
+                if not data.empty:
+                    # Fix column naming for consistency
+                    data = data.rename(columns={
+                    'Close': 'close', 
+                    'Volume': 'volume',
+                    'Open': 'open', 
+                    'High': 'high', 
+                    'Low': 'low',
+                    'Adj Close': 'adj_close'
+                })
+                
+                # Add indicators
+                self.test_data[symbol] = TechnicalIndicators.add_all_indicators(data)
+                
+                # DEBUG: Check what columns were actually created
+                columns = list(self.test_data[symbol].columns)
+                print(f"      📋 Columns created: {columns}")
+                
+                # Specifically check for RSI
+                rsi_columns = [col for col in columns if 'rsi' in col.lower()]
+                print(f"      🔍 RSI columns found: {rsi_columns}")
+                
+                # Check first few RSI values
+                if rsi_columns:
+                    rsi_col = rsi_columns[0]
+                    rsi_sample = self.test_data[symbol][rsi_col].dropna().head(5).tolist()
+                    print(f"      📊 Sample {rsi_col} values: {rsi_sample}")
+                else:
+                    print(f"      ❌ No RSI column found!")
+                
+                print(f"      ✅ {symbol}: {len(self.test_data[symbol])} days (Yahoo Finance)")
+                success_count += 1
+        
             except Exception as e:
                 print(f"      ❌ {symbol}: Error loading data - {e}")
         
         print(f"\n📈 Successfully loaded {success_count}/{len(self.TEST_CONFIG['test_symbols'])} assets")
+
+        # ADD THESE DEBUG LINES HERE:
+        print("\n🔍 DEBUGGING ASSET CONFIGURATION:")
+        print(f"📊 Assets actually loaded: {list(self.test_data.keys())}")
+        print(f"🎯 Framework says should be: {get_assets_for_test(self.test_type)}")
+        print(f"🔄 Config says should be: {self.TEST_CONFIG['test_symbols']}")
+        
         return success_count > 0
+        
     
     def test_individual_strategies(self):
-        """Test individual strategies across multiple assets (Best Asset Performance) - ULTIMATE CHALLENGE"""
-        print(f"\n🤖 Testing Individual Strategies (Best Asset Performance) - ULTIMATE CHALLENGE")
-        print("-" * 40)
+        """Test individual strategies across multiple assets (Best Asset Performance) - 3 MONTHS VERSION"""
+        print(f"\n🤖 Testing Individual Strategies (Best Asset Performance) - 3 MONTHS")
+        print("-" * 55)
         
         if not PROJECT_AVAILABLE:
             print("❌ Project strategies not available")
             return
         
+        # SAFER: Only test strategies that work reliably
         strategies_to_test = [
             (MLTradingStrategy(confidence_threshold=0.40), "MLTrading Strategy"),
             (TechnicalAnalysisStrategy(), "Technical Analysis Strategy"),
-            (HybridRSIDivergenceStrategy(
-                divergence_weight=0.6,
-                technical_weight=0.4,
-                base_strategy=TechnicalAnalysisStrategy()
-            ), "Hybrid RSI-ML"),
-            (HybridRSIDivergenceStrategy(
-                divergence_weight=0.4,
-                technical_weight=0.6,
-                base_strategy=TechnicalAnalysisStrategy()
-            ), "Hybrid RSI-Technical"),
         ]
         
+        # CONDITIONAL: Only add hybrid strategies if project modules are fully available
+        if PROJECT_AVAILABLE:
+            try:
+                # Test if HybridRSIDivergenceStrategy works
+                test_strategy = HybridRSIDivergenceStrategy(
+                    divergence_weight=0.6,
+                    technical_weight=0.4,
+                    base_strategy=TechnicalAnalysisStrategy()
+                )
+                
+                # Add hybrid strategies if they work
+                strategies_to_test.extend([
+                    (HybridRSIDivergenceStrategy(
+                        divergence_weight=0.6,
+                        technical_weight=0.4,
+                        base_strategy=TechnicalAnalysisStrategy()
+                    ), "Hybrid RSI-ML"),
+                    (HybridRSIDivergenceStrategy(
+                        divergence_weight=0.4,
+                        technical_weight=0.6,
+                        base_strategy=TechnicalAnalysisStrategy()
+                    ), "Hybrid RSI-Technical"),
+                ])
+                print("   ✅ Including Hybrid RSI strategies")
+                
+            except Exception as e:
+                print(f"   ⚠️ Skipping Hybrid RSI strategies due to error: {e}")
+        
         for strategy, strategy_name in strategies_to_test:
-            print(f"\n📊 Testing {strategy_name} across all assets (Ultimate Challenge):")
+            print(f"\n📊 Testing {strategy_name} across all assets:")
             
             best_return = -999
             best_asset = None
@@ -194,16 +271,27 @@ class HypothesisMultiStocks2Months:
             
             if best_results:
                 self.results[strategy_name] = best_results
-                print(f"   🏆 Best: {best_asset} with {best_return*100:+.2f}% return (Ultimate Challenge)")
+                print(f"   🏆 Best: {best_asset} with {best_return*100:+.2f}% return")
+            else:
+                print(f"   ❌ No successful results for {strategy_name}")
+        
+        print(f"\n📊 Individual strategies completed: {len(self.results)} successful strategies")
     
     def test_split_capital_strategy(self):
-        """Test Split-Capital Multi-Strategy across multiple assets - ULTIMATE CHALLENGE"""
-        print(f"\n🏆 Testing Split-Capital Multi-Strategy (Multiple Assets) - ULTIMATE CHALLENGE")
-        print("-" * 45)
+        """Test Split-Capital Multi-Strategy using UPDATED UltimatePortfolioRunner - 3 MONTHS"""
+        print(f"\n🏆 Testing Split-Capital Multi-Strategy - 3 MONTHS")
+        print("-" * 50)
         
         if not PROJECT_AVAILABLE:
             print("❌ Cannot run Split-Capital Multi-Strategy test")
             return None
+        
+        available_assets = list(self.test_data.keys())
+        print(f"\n🔍 PORTFOLIO DEBUG INFO:")
+        print(f"   Testing portfolio on: {available_assets}")
+        print(f"   Expected assets: {get_assets_for_test(self.test_type)}")
+        for asset in available_assets:
+            print(f"   {asset}: {len(self.test_data[asset])} days of data")
         
         try:
             strategy_classes = {
@@ -211,129 +299,64 @@ class HypothesisMultiStocks2Months:
                 'MLTradingStrategy': MLTradingStrategy
             }
             
-            # Use all available assets
-            assets = list(self.test_data.keys())
-            
-            print(f"Assets: {assets}")
+            print(f"\nAssets: {available_assets}")
             print(f"Strategies: {list(strategy_classes.keys())}")
-            print(f"Total combinations: {len(strategy_classes) * len(assets)}")
-            print(f"🔥 CHALLENGE LEVEL: MAXIMUM")
+            print(f"Total Capital: ${self.TEST_CONFIG['initial_capital']:,}")
             
-            # Run portfolio across multiple assets
-            total_return = 0
-            total_trades = 0
-            combinations_count = 0
-            all_signals = []
-            all_trades = []
+            # Create UltimatePortfolioRunner with ALL assets
+            runner = UltimatePortfolioRunner(
+                assets=available_assets,
+                initial_capital=self.TEST_CONFIG['initial_capital']
+            )
             
-            capital_per_combination = self.TEST_CONFIG['initial_capital'] // (len(strategy_classes) * len(assets))
-            combination_weight = 1.0 / (len(strategy_classes) * len(assets))
+            # UPDATED: Pass data as Dict[asset_name, DataFrame] for multiple assets
+            # The runner automatically detects multiple assets and runs true portfolio approach
+            results = runner.run_ultimate_portfolio_test(
+                data=self.test_data,  # Pass the entire test_data dict
+                backtester_class=ProductionBacktester,
+                strategy_classes=strategy_classes
+            )
             
-            print(f"Capital per combination: ${capital_per_combination:,}")
-            
-            detailed_results = {}
-            
-            for strategy_name, strategy_class in strategy_classes.items():
-                strategy_results = {}
-                
-                for asset in assets:
-                    if asset in self.test_data:
-                        print(f"\n📊 {strategy_name} on {asset} (${capital_per_combination:,}) - Ultimate Challenge:")
-                        
-                        try:
-                            # Create strategy
-                            if strategy_name == 'MLTradingStrategy':
-                                strategy = strategy_class(confidence_threshold=0.40)
-                            else:
-                                strategy = strategy_class()
-                            
-                            # Run backtest
-                            backtester = ProductionBacktester(
-                                initial_capital=capital_per_combination,
-                                transaction_cost=self.TEST_CONFIG['transaction_cost'],
-                                max_position_size=1.0
-                            )
-                            
-                            backtester.set_strategy(strategy)
-                            results = backtester.run_backtest(self.test_data[asset])
-                            
-                            combination_result = {
-                                'return': results['total_return'],
-                                'trades': results['total_trades'],
-                                'win_rate': results.get('win_rate', 0),
-                                'final_value': capital_per_combination * (1 + results['total_return'])
-                            }
-                            
-                            strategy_results[asset] = combination_result
-                            total_return += results['total_return'] * combination_weight
-                            total_trades += results['total_trades']
-                            combinations_count += 1
-                            
-                            print(f"      Return: {results['total_return']*100:+6.2f}%")
-                            print(f"      Trades: {results['total_trades']:2d}")
-                            
-                            # Collect signals for visualization
-                            signals = backtester.get_signals_history()
-                            trades = backtester.get_trade_history()
-                            
-                            if not signals.empty:
-                                signals['strategy_source'] = f"{strategy_name}_{asset}"
-                                all_signals.append(signals)
-                            
-                            if not trades.empty:
-                                trades['strategy_source'] = f"{strategy_name}_{asset}"
-                                all_trades.append(trades)
-                            
-                        except Exception as e:
-                            print(f"      ❌ Error: {e}")
-                
-                detailed_results[strategy_name] = strategy_results
-            
-            # Create combined results
+            # Store with descriptive name
             strategy_name = "Split-Capital Multi-Strategy"
-            combined_results = {
-                'strategy_name': strategy_name,
-                'total_return': total_return,
-                'total_trades': total_trades,
-                'combinations': combinations_count,
-                'assets': assets,
-                'detailed_breakdown': detailed_results,
-                'methodology': 'Portfolio Manager (multiple assets) - Ultimate Challenge',
-                'win_rate': 0.6,  # Estimated
-                'sharpe_ratio': 0.8  # Estimated
-            }
+            self.results[strategy_name] = results
             
-            self.results[strategy_name] = combined_results
-            
-            # Combine signals and trades
-            if all_signals:
-                combined_signals = pd.concat(all_signals, ignore_index=True)
-                self.backtester_signals[strategy_name] = combined_signals
-            
-            if all_trades:
-                combined_trades = pd.concat(all_trades, ignore_index=True)
-                self.trade_history[strategy_name] = combined_trades
+            # Get signals and trades from UltimatePortfolioRunner
+            try:
+                signals_df, trades_df = runner.get_signals_and_trades_for_visualization()
+                if not signals_df.empty:
+                    self.backtester_signals[strategy_name] = signals_df
+                    print(f"   📊 Collected {len(signals_df)} signals from all combinations")
+                if not trades_df.empty:
+                    self.trade_history[strategy_name] = trades_df
+                    print(f"   💼 Collected {len(trades_df)} trades from all combinations")
+            except Exception as e:
+                print(f"   Warning: Could not extract signals/trades: {e}")
             
             time_months = self.TEST_CONFIG['time_months']
-            monthly_freq = total_trades / time_months
+            monthly_freq = results['total_trades'] / time_months
             
-            print(f"\n🎯 SPLIT-CAPITAL MULTI-STRATEGY PERFORMANCE (ULTIMATE CHALLENGE):")
-            print(f"   Portfolio Return: {total_return*100:+6.2f}%")
-            print(f"   Total Trades: {total_trades}")
+            print(f"\n🎯 SPLIT-CAPITAL MULTI-STRATEGY PERFORMANCE (3 MONTHS):")
+            print(f"   Portfolio Return: {results['total_return']*100:+6.2f}%")
+            print(f"   Total Trades: {results['total_trades']}")
             print(f"   Trade Frequency: {monthly_freq:.1f} trades/month")
-            print(f"   Assets: {len(assets)}")
-            print(f"   Combinations: {combinations_count}")
-            print(f"   🔥 CHALLENGE COMPLETED: MAXIMUM DIFFICULTY")
+            print(f"   Final Value: ${results.get('final_value', 0):,.2f}")
+            print(f"   Assets: {len(available_assets)}")
+            print(f"   Combinations: {results.get('combinations', 0)}")
+            print(f"   Win Rate: {results.get('win_rate', 0)*100:.1f}%")
+            print(f"   Sharpe Ratio: {results.get('sharpe_ratio', 0):.3f}")
             
-            return combined_results
+            return results
             
         except Exception as e:
             print(f"❌ Error running Split-Capital Multi-Strategy: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def generate_analysis(self):
-        """Generate comprehensive analysis using framework - ULTIMATE CHALLENGE"""
-        print(f"\n📊 ANALYSIS: {self.TEST_CONFIG['test_name']} - ULTIMATE CHALLENGE")
+        """Generate comprehensive analysis using framework - 3 MONTHS"""
+        print(f"\n📊 ANALYSIS: {self.TEST_CONFIG['test_name']}")
         print("=" * 60)
         
         if not self.results:
@@ -347,8 +370,8 @@ class HypothesisMultiStocks2Months:
             reverse=True
         )
         
-        print(f"\n🏆 STRATEGY PERFORMANCE RANKING (ULTIMATE CHALLENGE):")
-        print("-" * 50)
+        print(f"\n🏆 STRATEGY PERFORMANCE RANKING (3 MONTHS):")
+        print("-" * 55)
         
         time_months = self.TEST_CONFIG['time_months']
         
@@ -361,35 +384,16 @@ class HypothesisMultiStocks2Months:
             print(f"{i:2d}. {name}")
             print(f"    Return: {return_pct:+7.2f}% | Trades: {trades:3d} ({monthly_trades:.1f}/mo) | Win Rate: {win_rate:5.1f}%")
         
-        # Ultimate challenge specific analysis
-        print(f"\n🔥 ULTIMATE CHALLENGE ASSESSMENT:")
-        if sorted_results:
-            top_strategy = sorted_results[0]
-            top_return = top_strategy[1]['total_return'] * 100
-            
-            if top_return > 10:
-                print(f"   🏆 LEGENDARY: {top_return:+.2f}% in ultimate challenge!")
-                print(f"   💎 Strategy shows exceptional robustness")
-            elif top_return > 5:
-                print(f"   🎯 EXCELLENT: {top_return:+.2f}% in ultimate challenge")
-                print(f"   🚀 Outstanding performance under maximum difficulty")
-            elif top_return > 0:
-                print(f"   👍 SOLID: {top_return:+.2f}% positive return in ultimate challenge")
-                print(f"   ✅ Strategy survived maximum difficulty test")
-            else:
-                print(f"   📚 LEARNING OPPORTUNITY: {top_return:+.2f}% in ultimate challenge")
-                print(f"   🎯 Focus on fundamentals before ultimate deployment")
-        
         # Use framework for hypothesis analysis
         add_hypothesis_test_analysis(self.results, "Split-Capital Multi-Strategy")
     
     def create_visualization(self):
-        """Create visualization for this test configuration - ULTIMATE CHALLENGE"""
+        """Create visualization for 3 months test configuration"""
         if not self.test_data:
             print("❌ No data available for visualization")
             return
         
-        print(f"\n📈 Creating visualization (ULTIMATE CHALLENGE)...")
+        print(f"\n📈 Creating visualization...")
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 14), height_ratios=[3, 1])
         
@@ -402,7 +406,7 @@ class HypothesisMultiStocks2Months:
                 ax1.plot(data.index, data['close'], 
                         label=f"{symbol} Price", linewidth=2, color=color, alpha=0.7)
         
-        ax1.set_title(f'{self.TEST_CONFIG["test_name"]}: Trading Strategies - ULTIMATE CHALLENGE 🔥', 
+        ax1.set_title(f'{self.TEST_CONFIG["test_name"]}: Trading Strategies', 
                      fontsize=16, fontweight='bold')
         ax1.set_ylabel('Price ($)', fontsize=14)
         ax1.legend(bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=10)
@@ -429,7 +433,7 @@ class HypothesisMultiStocks2Months:
             ax2.set_yticks(range(len(strategy_names)))
             ax2.set_yticklabels(strategy_names, fontsize=10)
             ax2.set_xlabel('Return (%)', fontsize=12)
-            ax2.set_title(f'{self.TEST_CONFIG["test_name"]} - Performance Comparison (ULTIMATE CHALLENGE)', fontsize=12)
+            ax2.set_title(f'{self.TEST_CONFIG["test_name"]} - Performance Comparison', fontsize=12)
             ax2.grid(True, alpha=0.3, axis='x')
             ax2.axvline(x=0, color='black', linewidth=1, alpha=0.5)
         
@@ -444,41 +448,53 @@ class HypothesisMultiStocks2Months:
         print(f"✅ Visualization saved to {filename}")
     
     def save_results(self):
-        """Save results to comparison_tests_results folder"""
+        """Save results to comparison_tests_results folder - 3 MONTHS"""
         os.makedirs('comparison_tests_results', exist_ok=True)
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'comparison_tests_results/results_{self.test_type}_{timestamp}.txt'
         
+        # ONLY FIX: Add encoding='utf-8' to handle emoji characters
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write(f"HYPOTHESIS TESTING RESULTS: {self.TEST_CONFIG['test_name']} - ULTIMATE CHALLENGE\n")
+            f.write(f"HYPOTHESIS TESTING RESULTS: {self.TEST_CONFIG['test_name']}\n")
             f.write("=" * 70 + "\n")
             f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Test Configuration: {self.test_type}\n")
-            f.write(f"Challenge Level: ULTIMATE CHALLENGE (Maximum Difficulty)\n")
             f.write(f"Assets: {', '.join(self.TEST_CONFIG['test_symbols'])}\n")
             f.write(f"Period: {self.TEST_CONFIG['start_date']} to {self.TEST_CONFIG['end_date']}\n")
             f.write(f"Capital: ${self.TEST_CONFIG['initial_capital']:,}\n")
-            f.write(f"Duration: {self.TEST_CONFIG['time_months']} months\n\n")
+            f.write(f"Duration: {self.TEST_CONFIG['time_months']} months\n")
+            f.write(f"NOTE: 3 months is the MINIMUM VIABLE PERIOD for algorithmic testing\n\n")
             
-            # Write all results
+            # Write all results - convert complex objects to safe strings
             for name, data in self.results.items():
                 if isinstance(data, dict):
                     f.write(f"{name}:\n")
                     for key, value in data.items():
-                        f.write(f"  {key}: {value}\n")
+                        # Handle complex objects that might contain emojis or problematic characters
+                        if isinstance(value, (str, int, float, bool)) or value is None:
+                            f.write(f"  {key}: {value}\n")
+                        else:
+                            # Convert to string and clean up
+                            clean_value = str(value).encode('ascii', 'ignore').decode('ascii')
+                            f.write(f"  {key}: {clean_value}\n")
                     f.write("\n")
         
         print(f"✅ Results saved to {filename}")
         return filename
     
     def run_all_tests(self):
-        """Run all tests for this configuration"""
+        """Run all tests for 3 months configuration"""
+
+        print(f"\n🔍 INITIAL CONFIG DEBUG:")
+        print(f"   Test type: {self.test_type}")
+        print(f"   Framework assets: {get_assets_for_test(self.test_type)}")
+        print(f"   Config assets: {self.TEST_CONFIG['test_symbols']}")
+        
         if not self.load_test_data():
             return
         
         print(f"\n🚀 Running {self.TEST_CONFIG['test_name']} tests...")
-        print(f"🔥 ULTIMATE CHALLENGE MODE ACTIVATED!")
         
         # Test strategies
         self.test_individual_strategies()
@@ -493,13 +509,15 @@ class HypothesisMultiStocks2Months:
         results_file = self.save_results()
         
         print(f"\n🎉 {self.TEST_CONFIG['test_name']} testing complete!")
-        print(f"🔥 ULTIMATE CHALLENGE CONQUERED!")
         print(f"📁 Results saved to: {results_file}")
+        print(f"\n📊 MINIMUM VIABLE PERIOD TESTING:")
+        print(f"   ✅ 3 months is the minimum acceptable period for reliable algorithmic trading")
+        print(f"   ⚠️ Consider 6+ months for production trading decisions")
 
 
 def main():
-    """Run Multiple Stocks, 2 Months hypothesis testing - ULTIMATE CHALLENGE"""
-    tester = HypothesisMultiStocks2Months()
+    """Run Multiple Stocks, 3 Months hypothesis testing"""
+    tester = HypothesisMultiStocks3Months()
     tester.run_all_tests()
 
 

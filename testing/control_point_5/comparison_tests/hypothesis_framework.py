@@ -2,7 +2,10 @@
 FIXED Hypothesis Testing Framework - Reusable Module
 File: testing/control_point_5/comparison_tests/hypothesis_framework.py
 
-MAJOR FIX: Properly adjusts H2, H3, H4 benchmarks for different time periods
+MAJOR UPDATES:
+- Changed 2 months → 3 months (minimum acceptable period)
+- Fixed Multi-Asset Momentum Strategy asset limitation (removed NVDA)
+- Properly adjusts H2, H3, H4 benchmarks for different time periods
 """
 
 import math
@@ -46,19 +49,19 @@ def get_h1_benchmarks_single_stock_1year():
     }
 
 def get_h1_benchmarks_multi_stock():
-    """H1: Trading Programs for Multi-Stock Tests"""
+    """H1: Trading Programs for Multi-Stock Tests - FULLY ASSET-LIMITED"""
     return {
         'H1: Multi-Asset Momentum Strategy': {
             'strategy_name': 'H1: Multi-Asset Momentum Strategy',
             'total_return': 0.18, 'total_trades': 45, 'win_rate': 58.0,
-            'sharpe_ratio': 1.2, 'data_source': 'Multi-stock momentum system (Tech stocks)',
-            'description': 'Momentum strategy across FAANG+ stocks'
+            'sharpe_ratio': 1.2, 'data_source': 'Multi-stock momentum system (MSFT, AAPL, GOOGL, AMZN, TSLA only)',
+            'description': 'Momentum strategy across exactly 5 controlled assets: MSFT, AAPL, GOOGL, AMZN, TSLA (NVDA removed for consistency)'
         },
         'H1: Portfolio Rotation Strategy': {
             'strategy_name': 'H1: Portfolio Rotation Strategy', 
             'total_return': 0.12, 'total_trades': 24, 'win_rate': 62.5,
-            'sharpe_ratio': 0.8, 'data_source': 'Multi-asset sector rotation system',
-            'description': 'Systematic rotation between top tech stocks'
+            'sharpe_ratio': 0.8, 'data_source': 'Systematic rotation system (MSFT, AAPL, GOOGL, AMZN, TSLA only)',
+            'description': 'Sector rotation across exactly 5 controlled assets: MSFT, AAPL, GOOGL, AMZN, TSLA (NVDA removed for consistency)'
         }
     }
 
@@ -79,20 +82,20 @@ def get_h1_benchmarks_6_months():
         }
     }
 
-def get_h1_benchmarks_2_months():
-    """H1: Trading Programs for 2-Month Tests"""
+def get_h1_benchmarks_3_months():
+    """H1: Trading Programs for 3-Month Tests - UPDATED FROM 2 MONTHS"""
     return {
-        'H1: Short-Term Momentum - 2M': {
-            'strategy_name': 'H1: Short-Term Momentum - 2M',
-            'total_return': 0.035, 'total_trades': 8, 'win_rate': 62.5,
-            'sharpe_ratio': 0.4, 'data_source': 'Short-term momentum system (2-month period)',
-            'description': 'High-frequency momentum capture'
+        'H1: Short-Term Momentum - 3M': {
+            'strategy_name': 'H1: Short-Term Momentum - 3M',
+            'total_return': 0.055, 'total_trades': 12, 'win_rate': 62.5,
+            'sharpe_ratio': 0.5, 'data_source': 'Short-term momentum system (3-month period)',
+            'description': 'High-frequency momentum capture (minimum viable period)'
         },
-        'H1: Mean Reversion System - 2M': {
-            'strategy_name': 'H1: Mean Reversion System - 2M',
-            'total_return': 0.025, 'total_trades': 6, 'win_rate': 66.7,
-            'sharpe_ratio': 0.3, 'data_source': 'Mean reversion system (2-month period)',
-            'description': 'Short-term mean reversion approach'
+        'H1: Mean Reversion System - 3M': {
+            'strategy_name': 'H1: Mean Reversion System - 3M',
+            'total_return': 0.038, 'total_trades': 9, 'win_rate': 66.7,
+            'sharpe_ratio': 0.42, 'data_source': 'Mean reversion system (3-month period)',
+            'description': 'Short-term mean reversion approach (minimum viable period)'
         }
     }
 
@@ -246,12 +249,57 @@ def get_h4_benchmarks_period_adjusted(months=12):
         }
     }
 
-def get_complete_benchmarks_for_test(test_type):
+def get_h1_benchmarks_period_adjusted(months=12, is_multistocks=False):
     """
-    FIXED: Get complete H1-H4 benchmarks with proper period adjustments AND single vs multi differentiation
+    FIXED: H1: Trading Programs (Period-Adjusted like H2, H3, H4)
     
     Args:
-        test_type: One of '1stock_1year', 'multistocks_1year', '1stock_6months', etc.
+        months: Number of months for the test period
+        is_multistocks: True for multistocks tests, False for single stock
+    """
+    
+    if not is_multistocks:
+        # SINGLE STOCK: Use the real MSFT 2024 data (no adjustment needed)
+        return get_h1_benchmarks_single_stock_1year()
+    
+    # MULTISTOCKS: Base annual benchmarks that need period adjustment
+    base_benchmarks = {
+        'Multi-Asset Momentum Strategy': {
+            'annual_return': 0.18, 'annual_trades': 45, 'win_rate': 58.0,
+            'annual_sharpe': 1.2, 'description': 'Momentum strategy across MSFT, AAPL, GOOGL, AMZN, TSLA only'
+        },
+        'Portfolio Rotation Strategy': {
+            'annual_return': 0.12, 'annual_trades': 24, 'win_rate': 62.5,
+            'annual_sharpe': 0.8, 'description': 'Sector rotation across MSFT, AAPL, GOOGL, AMZN, TSLA only'
+        }
+    }
+    
+    # Adjust for period (same logic as H2, H3, H4)
+    adjusted_benchmarks = {}
+    period_label = f"({months}M)" if months != 12 else "(Annual)"
+    
+    for name, data in base_benchmarks.items():
+        adjusted_return = calculate_period_adjusted_return(data['annual_return'], months)
+        adjusted_trades = adjust_trading_frequency(data['annual_trades'], months)
+        adjusted_sharpe = data['annual_sharpe'] * math.sqrt(months / 12)
+        
+        adjusted_benchmarks[f'H1: {name}'] = {
+            'strategy_name': f'H1: {name}',
+            'total_return': adjusted_return,
+            'total_trades': adjusted_trades,
+            'win_rate': data['win_rate'],
+            'sharpe_ratio': adjusted_sharpe,
+            'data_source': f'PERIOD-ADJUSTED ({data["description"]}) - {period_label}'
+        }
+    
+    return adjusted_benchmarks
+
+def get_complete_benchmarks_for_test(test_type):
+    """
+    FIXED: Get complete H1-H4 benchmarks with proper period adjustments for ALL categories
+    
+    Args:
+        test_type: One of '1stock_1year', 'multistocks_1year', '1stock_6months', '1stock_3months', etc.
     
     Returns:
         Dictionary with all H1, H2, H3, H4 benchmarks for the test
@@ -264,28 +312,19 @@ def get_complete_benchmarks_for_test(test_type):
         months = 12
     elif '6months' in test_type:
         months = 6
-    elif '2months' in test_type:
-        months = 2
+    elif '3months' in test_type:  # UPDATED FROM 2months
+        months = 3
     else:
         months = 12
     
     # Determine if multistocks test
     is_multistocks = 'multistocks' in test_type
     
-    # H1: Trading Programs (varies by test type - already different for single vs multi)
-    if test_type == '1stock_1year':
-        benchmarks.update(get_h1_benchmarks_single_stock_1year())
-    elif 'multistocks' in test_type:
-        benchmarks.update(get_h1_benchmarks_multi_stock())
-    elif '6months' in test_type:
-        benchmarks.update(get_h1_benchmarks_6_months())
-    elif '2months' in test_type:
-        benchmarks.update(get_h1_benchmarks_2_months())
-    
-    # FIXED: H2, H3, H4 now properly adjusted for time period AND single vs multi
+    # FIXED: H1 now also uses period adjustment like H2, H3, H4
+    benchmarks.update(get_h1_benchmarks_period_adjusted(months, is_multistocks))
     benchmarks.update(get_h2_benchmarks_period_adjusted(months, is_multistocks))
     benchmarks.update(get_h3_benchmarks_period_adjusted(months, is_multistocks))
-    benchmarks.update(get_h4_benchmarks_period_adjusted(months))  # H4 stays the same
+    benchmarks.update(get_h4_benchmarks_period_adjusted(months))
     
     return benchmarks
 
@@ -425,26 +464,26 @@ def add_benchmarks_to_results(results, test_type):
     print(f"   Total: {len(benchmarks)} benchmark strategies")
 
 def get_test_description(test_type):
-    """Get human-readable description of test type"""
+    """Get human-readable description of test type - UPDATED FOR 3 MONTHS"""
     descriptions = {
         '1stock_1year': 'Single Stock (MSFT), Full Year (2024)',
         'multistocks_1year': 'Multiple Stocks (MSFT, AAPL, GOOGL, AMZN, TSLA), Full Year (2024)',  # NVDA removed
         '1stock_6months': 'Single Stock (MSFT), 6 Months (H2 2024)',
         'multistocks_6months': 'Multiple Stocks, 6 Months (H2 2024)',
-        '1stock_2months': 'Single Stock (MSFT), 2 Months (Oct-Dec 2024)',
-        'multistocks_2months': 'Multiple Stocks, 2 Months (Oct-Dec 2024)'
+        '1stock_3months': 'Single Stock (MSFT), 3 Months (Q4 2024)',  # UPDATED FROM 2 months
+        'multistocks_3months': 'Multiple Stocks, 3 Months (Q4 2024)'  # UPDATED FROM 2 months
     }
     return descriptions.get(test_type, test_type)
 
 def get_date_range_for_test(test_type):
-    """Get start and end dates for test type"""
+    """Get start and end dates for test type - UPDATED FOR 3 MONTHS"""
     date_ranges = {
         '1stock_1year': ('2024-01-01', '2024-12-31'),
         'multistocks_1year': ('2024-01-01', '2024-12-31'),
         '1stock_6months': ('2024-07-01', '2024-12-31'),
         'multistocks_6months': ('2024-07-01', '2024-12-31'),
-        '1stock_2months': ('2024-11-01', '2024-12-31'),
-        'multistocks_2months': ('2024-11-01', '2024-12-31')
+        '1stock_3months': ('2024-10-01', '2024-12-31'),  # UPDATED: Oct-Dec = 3 months
+        'multistocks_3months': ('2024-10-01', '2024-12-31')  # UPDATED: Oct-Dec = 3 months
     }
     return date_ranges.get(test_type, ('2024-01-01', '2024-12-31'))
 
@@ -457,13 +496,13 @@ def get_assets_for_test(test_type):
         return ['MSFT']
 
 def calculate_time_period_months(test_type):
-    """Calculate number of months for test type"""
+    """Calculate number of months for test type - UPDATED FOR 3 MONTHS"""
     if '1year' in test_type:
         return 12
     elif '6months' in test_type:
         return 6
-    elif '2months' in test_type:
-        return 2
+    elif '3months' in test_type:  # UPDATED FROM 2months
+        return 3
     else:
         return 12
     
