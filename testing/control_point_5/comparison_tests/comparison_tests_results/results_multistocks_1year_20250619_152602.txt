@@ -1,0 +1,170 @@
+HYPOTHESIS TESTING RESULTS: Multiple Stocks (MSFT, AAPL, GOOGL, NVDA), Full Year (2024)
+======================================================================
+Generated: 2025-06-19 15:26:02
+Test Configuration: multistocks_1year
+Assets: MSFT, AAPL, GOOGL, NVDA
+Period: 2024-01-01 to 2024-12-31
+Capital: $10,000
+Duration: 12 months
+
+MLTrading Strategy:
+  initial_capital: 10000
+  final_value: 12984.070982
+  total_return: 0.29840709819999994
+  benchmark_return: 1.7879505065603718
+  alpha: -1.4895434083603718
+  trading_days: 232
+  total_trades: 8
+  buy_trades: 4
+  sell_trades: 4
+  win_rate: 0.5
+  sharpe_ratio: 1.2726715804282862
+  max_drawdown: 0.19721670180957315
+  volatility: 0.2481370451010722
+  average_daily_return: 0.0012531625609189941
+  hit_rate: 0.16017316017316016
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  best_asset: NVDA
+  strategy_name: MLTrading Strategy (Best: NVDA)
+
+Technical Analysis Strategy:
+  initial_capital: 10000
+  final_value: 12983.444580000003
+  total_return: 0.2983444580000003
+  benchmark_return: 1.7879505065603718
+  alpha: -1.4896060485603715
+  trading_days: 232
+  total_trades: 5
+  buy_trades: 3
+  sell_trades: 2
+  win_rate: 1.0
+  sharpe_ratio: 1.235003871700266
+  max_drawdown: 0.20891887549679677
+  volatility: 0.25771778700990317
+  average_daily_return: 0.0012630256538224403
+  hit_rate: 0.12987012987012986
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  best_asset: NVDA
+  strategy_name: Technical Analysis Strategy (Best: NVDA)
+
+Hybrid RSI-ML:
+  initial_capital: 10000
+  final_value: 12983.444580000003
+  total_return: 0.2983444580000003
+  benchmark_return: 1.7879505065603718
+  alpha: -1.4896060485603715
+  trading_days: 232
+  total_trades: 5
+  buy_trades: 3
+  sell_trades: 2
+  win_rate: 1.0
+  sharpe_ratio: 1.235003871700266
+  max_drawdown: 0.20891887549679677
+  volatility: 0.25771778700990317
+  average_daily_return: 0.0012630256538224403
+  hit_rate: 0.12987012987012986
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  best_asset: NVDA
+  strategy_name: Hybrid RSI-ML (Best: NVDA)
+
+Hybrid RSI-Technical:
+  initial_capital: 10000
+  final_value: 12983.444580000003
+  total_return: 0.2983444580000003
+  benchmark_return: 1.7879505065603718
+  alpha: -1.4896060485603715
+  trading_days: 232
+  total_trades: 5
+  buy_trades: 3
+  sell_trades: 2
+  win_rate: 1.0
+  sharpe_ratio: 1.235003871700266
+  max_drawdown: 0.20891887549679677
+  volatility: 0.25771778700990317
+  average_daily_return: 0.0012630256538224403
+  hit_rate: 0.12987012987012986
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  best_asset: NVDA
+  strategy_name: Hybrid RSI-Technical (Best: NVDA)
+
+Split-Capital Multi-Strategy:
+  strategy_name: Split-Capital Multi-Strategy
+  total_return: 0.12214964369999998
+  total_trades: 60
+  combinations: 8
+  assets: ['MSFT', 'AAPL', 'GOOGL', 'NVDA']
+  detailed_breakdown: {'TechnicalAnalysisStrategy': {'MSFT': {'return': 0.16786408799999955, 'trades': 6, 'win_rate': 1.0, 'final_value': 1459.8301099999994}, 'AAPL': {'return': -0.009586127999999918, 'trades': 2, 'win_rate': 0.0, 'final_value': 1238.01734}, 'GOOGL': {'return': 0.1589626000000002, 'trades': 4, 'win_rate': 1.0, 'final_value': 1448.7032500000003}, 'NVDA': {'return': 0.29601574, 'trades': 5, 'win_rate': 1.0, 'final_value': 1620.019675}}, 'MLTradingStrategy': {'MSFT': {'return': 0.0587477359999999, 'trades': 9, 'win_rate': 0.75, 'final_value': 1323.4346699999999}, 'AAPL': {'return': 0.07502395999999971, 'trades': 12, 'win_rate': 0.5, 'final_value': 1343.7799499999996}, 'GOOGL': {'return': -0.051897879999999896, 'trades': 14, 'win_rate': 0.5714285714285714, 'final_value': 1185.1276500000001}, 'NVDA': {'return': 0.2820670336000001, 'trades': 8, 'win_rate': 0.5, 'final_value': 1602.5837920000001}}}
+  methodology: Portfolio Manager (multiple assets)
+  win_rate: 0.6
+  sharpe_ratio: 0.8
+
+H1: Multi-Asset Momentum Strategy:
+  strategy_name: H1: Multi-Asset Momentum Strategy
+  total_return: 0.18
+  total_trades: 45
+  win_rate: 58.0
+  sharpe_ratio: 1.2
+  data_source: Multi-stock momentum system (Tech stocks)
+  description: Momentum strategy across FAANG+ stocks
+
+H1: Portfolio Rotation Strategy:
+  strategy_name: H1: Portfolio Rotation Strategy
+  total_return: 0.12
+  total_trades: 24
+  win_rate: 62.5
+  sharpe_ratio: 0.8
+  data_source: Multi-asset sector rotation system
+  description: Systematic rotation between top tech stocks
+
+H2: Cathie Wood (ARKK):
+  strategy_name: H2: Cathie Wood (ARKK)
+  total_return: 0.1408
+  total_trades: 156
+  win_rate: 52.0
+  sharpe_ratio: 0.3936
+  data_source: REAL ARKK ETF DATA (Innovation investing)
+
+H2: Warren Buffett (BRK-A):
+  strategy_name: H2: Warren Buffett (BRK-A)
+  total_return: 0.2334
+  total_trades: 8
+  win_rate: 75.0
+  sharpe_ratio: 1.4871
+  data_source: REAL BRK-A DATA (Value investing)
+
+H2: Ray Dalio (All Weather):
+  strategy_name: H2: Ray Dalio (All Weather)
+  total_return: 0.0561
+  total_trades: 4
+  win_rate: 72.0
+  sharpe_ratio: 0.6595
+  data_source: All Weather strategy proxy (Risk parity)
+
+H3: AI ETF (QQQ):
+  strategy_name: H3: AI ETF (QQQ)
+  total_return: 0.2883
+  total_trades: 100
+  win_rate: 58.0
+  sharpe_ratio: 1.6052
+  data_source: REAL QQQ ETF DATA (AI/Tech systems)
+
+H3: Robo-Advisor Average:
+  strategy_name: H3: Robo-Advisor Average
+  total_return: 0.089
+  total_trades: 24
+  win_rate: 63.0
+  sharpe_ratio: 0.63
+  data_source: Average robo-advisor performance (AI portfolio management)
+
+H4: Beginner Trader:
+  strategy_name: H4: Beginner Trader
+  total_return: -0.15
+  total_trades: 67
+  win_rate: 41.0
+  sharpe_ratio: -0.23
+  data_source: Academic research on retail trader performance
+

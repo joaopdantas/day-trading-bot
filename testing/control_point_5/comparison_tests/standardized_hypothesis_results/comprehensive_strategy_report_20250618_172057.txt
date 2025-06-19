@@ -1,0 +1,86 @@
+COMPREHENSIVE STANDARDIZED STRATEGY REPORT
+============================================================
+Generated: 2025-06-18 17:20:57
+Test Period: 2024-01-01 to 2024-12-31
+Symbol: TSLA
+Initial Capital: $10,000
+
+STRATEGY PERFORMANCE RANKING:
+--------------------------------------------------------------------------------
+Rank Strategy                            Return   Trades  Win%   Sharpe 
+--------------------------------------------------------------------------------
+1    Buy & Hold Strategy                 121.86%       1  0.0%    1.68
+2    MLTrading Strategy                   98.65%      12 33.3%    1.85
+3    Hybrid RSI-ML                        87.74%      24 58.3%    1.69
+4    H1: Strategy ETF Proxy               36.00%       0  0.0%    1.90
+5    H1: TradingView Strategy             35.39%      92 64.1%   -0.26
+6    H3: AI ETF                           28.83%       0  0.0%    1.61
+7    H1: Systematic Strategy              27.99%       0  0.0%    0.00
+8    H2: Warren Buffett                   23.34%       0  0.0%    1.56
+9    H2: Cathie Wood                      14.08%       0  0.0%    0.39
+10   Technical Analysis Strategy          10.32%       4 50.0%    0.48
+11   H3: Robo-Advisor                      8.90%       0  0.0%    0.00
+12   H2: Ray Dalio                         5.82%       0  0.0%    0.00
+13   RSI Divergence Strategy               4.51%      10 40.0%    0.31
+14   Hybrid RSI-Technical                 -0.60%      12 33.3%    0.16
+15   H4: Beginner Trader                 -15.00%       0  0.0%    0.00
+
+BEST PERFORMER: Buy & Hold Strategy
+Return: 121.86%
+Final Value: $22,186.43
+Trades: 1
+Win Rate: 0.0%
+Sharpe Ratio: 1.68
+Max Drawdown: 29.72%
+
+PERFORMANCE CATEGORIES:
+Excellent (20%+): 8 strategies
+  - Buy & Hold Strategy: 121.86%
+  - MLTrading Strategy: 98.65%
+  - Hybrid RSI-ML: 87.74%
+  - H1: Strategy ETF Proxy: 36.00%
+  - H1: TradingView Strategy: 35.39%
+  - H3: AI ETF: 28.83%
+  - H1: Systematic Strategy: 27.99%
+  - H2: Warren Buffett: 23.34%
+Good (10-20%): 2 strategies
+  - H2: Cathie Wood: 14.08%
+  - Technical Analysis Strategy: 10.32%
+Moderate (5-10%): 2 strategies
+Needs Work (<5%): 3 strategies
+
+MLTradingStrategy ANALYSIS:
+Ranking: #2 out of 15 strategies
+Return: 98.65%
+Performance Tier: Excellent
+
+STRATEGY COMPARISON INSIGHTS:
+High-Frequency Strategies (50+ trades): 1 strategies, avg return: 35.39%
+Low-Frequency Strategies (<20 trades): 13 strategies, avg return: 28.05%
+Insight: High-frequency strategies outperform by 7.34% on average
+Technical Analysis Strategies: 4 strategies, avg return: 25.49%
+ML/AI Strategies: 3 strategies, avg return: 71.74%
+
+HYPOTHESIS TEST RESULTS:
+H1 (Trading Programs): PASSED - Your AI: 98.65% vs Best: 36.00%
+H2 (Famous Investors): PASSED - Your AI: 98.65% vs Best: 23.34%
+H3 (AI Systems): PASSED - Your AI: 98.65% vs Best: 28.83%
+H4 (Beginner Trader): PASSED - Your AI: 98.65% vs Beginner: -15.00%
+
+TECHNICAL DETAILS:
+Data Source: polygon
+Trading Days: 251
+Standardization: All strategies tested with identical conditions
+Transaction Cost: 0.1%
+Position Sizing: Full capital utilization
+
+RECOMMENDATIONS:
+Top performing strategies to consider:
+1. Buy & Hold Strategy: 121.86% return, 1 trades
+2. MLTrading Strategy: 98.65% return, 12 trades
+3. Hybrid RSI-ML: 87.74% return, 24 trades
+
+Risk-adjusted top performers (Sharpe > 1.0, Return > 5%):
+- Buy & Hold Strategy: 121.86% return, Sharpe: 1.68
+- MLTrading Strategy: 98.65% return, Sharpe: 1.85
+- Hybrid RSI-ML: 87.74% return, Sharpe: 1.69

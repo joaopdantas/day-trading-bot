@@ -1,0 +1,169 @@
+HYPOTHESIS TESTING RESULTS: Single Stock (MSFT), 6 Months (H2 2024)
+======================================================================
+Generated: 2025-06-19 15:31:32
+Test Configuration: 1stock_6months
+Assets: MSFT
+Period: 2024-07-01 to 2024-12-31
+Capital: $10,000
+Duration: 6 months
+
+MLTrading Strategy:
+  initial_capital: 10000
+  final_value: 9589.02432
+  total_return: -0.04109756799999995
+  benchmark_return: -0.07713528780680055
+  alpha: 0.0360377198068006
+  trading_days: 108
+  total_trades: 5
+  buy_trades: 3
+  sell_trades: 2
+  win_rate: 0.0
+  sharpe_ratio: -0.4503563866756223
+  max_drawdown: 0.08888149572167142
+  volatility: 0.17846158509174037
+  average_daily_return: -0.0003189337881838107
+  hit_rate: 0.3925233644859813
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: MLTrading Strategy
+
+Technical Analysis Strategy:
+  initial_capital: 10000
+  final_value: 10700.450729999999
+  total_return: 0.07004507299999986
+  benchmark_return: -0.07713528780680055
+  alpha: 0.14718036080680041
+  trading_days: 108
+  total_trades: 4
+  buy_trades: 2
+  sell_trades: 2
+  win_rate: 1.0
+  sharpe_ratio: 1.2337029632633285
+  max_drawdown: 0.06484371600000013
+  volatility: 0.13898918370345692
+  average_daily_return: 0.0006804419357004204
+  hit_rate: 0.32710280373831774
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Technical Analysis Strategy
+
+Hybrid RSI-ML:
+  initial_capital: 10000
+  final_value: 10105.317380000002
+  total_return: 0.010531738000000223
+  benchmark_return: -0.07713528780680055
+  alpha: 0.08766702580680077
+  trading_days: 108
+  total_trades: 9
+  buy_trades: 5
+  sell_trades: 4
+  win_rate: 0.75
+  sharpe_ratio: 0.24517149362757346
+  max_drawdown: 0.0665359305508523
+  volatility: 0.16875718453836508
+  average_daily_return: 0.00016418432933990084
+  hit_rate: 0.38317757009345793
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Hybrid RSI-ML
+
+Hybrid RSI-Technical:
+  initial_capital: 10000
+  final_value: 10105.317380000002
+  total_return: 0.010531738000000223
+  benchmark_return: -0.07713528780680055
+  alpha: 0.08766702580680077
+  trading_days: 108
+  total_trades: 9
+  buy_trades: 5
+  sell_trades: 4
+  win_rate: 0.75
+  sharpe_ratio: 0.24517149362757346
+  max_drawdown: 0.0665359305508523
+  volatility: 0.16875718453836508
+  average_daily_return: 0.00016418432933990084
+  hit_rate: 0.38317757009345793
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Hybrid RSI-Technical
+
+Split-Capital Multi-Strategy:
+  strategy_name: 🏆 Ultimate Portfolio Strategy
+  total_return: 0.05052251599999999
+  total_trades: 10
+  trade_frequency_monthly: 0.8333333333333334
+  combinations: 2
+  individual_results: [{'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.06950528199999989, 'trades': 4, 'win_rate': 1.0, 'sharpe': 1.2565804542929353, 'capital': 5000, 'final_value': 5347.5264099999995, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000173A191B710>}, {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.031539750000000095, 'trades': 6, 'win_rate': 0.3333333333333333, 'sharpe': 0.5554311561374947, 'capital': 5000, 'final_value': 5157.6987500000005, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000173A3713890>}]
+  portfolio_breakdown: {'Technical Analysis': {'MSFT': {'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.06950528199999989, 'trades': 4, 'win_rate': 1.0, 'sharpe': 1.2565804542929353, 'capital': 5000, 'final_value': 5347.5264099999995, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000173A191B710>}}, 'MLTrading Strategy': {'MSFT': {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.031539750000000095, 'trades': 6, 'win_rate': 0.3333333333333333, 'sharpe': 0.5554311561374947, 'capital': 5000, 'final_value': 5157.6987500000005, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000173A3713890>}}}
+  methodology: Portfolio Manager (split capital)
+  win_rate: 0.6666666666666666
+  sharpe_ratio: 0.906005805215215
+  final_value: 10505.22516
+  initial_capital: 10000
+
+H1: Trend Following System - 6M:
+  strategy_name: H1: Trend Following System - 6M
+  total_return: 0.08
+  total_trades: 15
+  win_rate: 60.0
+  sharpe_ratio: 0.65
+  data_source: Systematic trend following (6-month period)
+  description: General trend following approach
+
+H1: Breakout Strategy - 6M:
+  strategy_name: H1: Breakout Strategy - 6M
+  total_return: 0.06
+  total_trades: 10
+  win_rate: 55.0
+  sharpe_ratio: 0.45
+  data_source: Breakout trading system (6-month period)
+  description: Technical breakout identification system
+
+H2: Cathie Wood (ARKK):
+  strategy_name: H2: Cathie Wood (ARKK)
+  total_return: 0.1408
+  total_trades: 156
+  win_rate: 52.0
+  sharpe_ratio: 0.3936
+  data_source: REAL ARKK ETF DATA (Innovation investing)
+
+H2: Warren Buffett (BRK-A):
+  strategy_name: H2: Warren Buffett (BRK-A)
+  total_return: 0.2334
+  total_trades: 8
+  win_rate: 75.0
+  sharpe_ratio: 1.4871
+  data_source: REAL BRK-A DATA (Value investing)
+
+H2: Ray Dalio (All Weather):
+  strategy_name: H2: Ray Dalio (All Weather)
+  total_return: 0.0561
+  total_trades: 4
+  win_rate: 72.0
+  sharpe_ratio: 0.6595
+  data_source: All Weather strategy proxy (Risk parity)
+
+H3: AI ETF (QQQ):
+  strategy_name: H3: AI ETF (QQQ)
+  total_return: 0.2883
+  total_trades: 100
+  win_rate: 58.0
+  sharpe_ratio: 1.6052
+  data_source: REAL QQQ ETF DATA (AI/Tech systems)
+
+H3: Robo-Advisor Average:
+  strategy_name: H3: Robo-Advisor Average
+  total_return: 0.089
+  total_trades: 24
+  win_rate: 63.0
+  sharpe_ratio: 0.63
+  data_source: Average robo-advisor performance (AI portfolio management)
+
+H4: Beginner Trader:
+  strategy_name: H4: Beginner Trader
+  total_return: -0.15
+  total_trades: 67
+  win_rate: 41.0
+  sharpe_ratio: -0.23
+  data_source: Academic research on retail trader performance
+
