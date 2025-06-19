@@ -8,7 +8,7 @@ with split capital, exactly like the working portfolio optimization methodology.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union  
 import logging
 
 logger = logging.getLogger(__name__)
@@ -322,7 +322,8 @@ class PortfolioManager:
 
 class UltimatePortfolioRunner:
     """
-    Convenient wrapper for running Ultimate Portfolio tests
+    UPDATED: Convenient wrapper for running Ultimate Portfolio tests
+    Now supports both single asset and multiple assets
     """
     
     def __init__(self, assets: List[str] = None, initial_capital: float = 10000):
@@ -340,16 +341,16 @@ class UltimatePortfolioRunner:
         
     def run_ultimate_portfolio_test(
         self, 
-        data: pd.DataFrame, 
+        data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], 
         backtester_class, 
         strategy_classes: Dict,
         custom_strategies_config: Dict = None
     ) -> Dict:
         """
-        Run Ultimate Portfolio test using the TRUE methodology
+        UPDATED: Run Ultimate Portfolio test - handles both single asset and multiple assets
         
         Args:
-            data: Market data for backtesting
+            data: Either single DataFrame OR Dict[asset_name, DataFrame] for multiple assets
             backtester_class: ProductionBacktester class
             strategy_classes: Dictionary mapping strategy names to classes
             custom_strategies_config: Optional custom strategy configuration
@@ -358,17 +359,174 @@ class UltimatePortfolioRunner:
             Portfolio results dictionary
         """
         
-        # Initialize portfolio manager
+        # Determine if single or multiple assets
+        if isinstance(data, dict):
+            # Multiple assets: data is Dict[asset_name, DataFrame]
+            return self._run_multiple_assets_portfolio(data, backtester_class, strategy_classes, custom_strategies_config)
+        else:
+            # Single asset: data is DataFrame (original functionality)
+            return self._run_single_asset_portfolio(data, backtester_class, strategy_classes, custom_strategies_config)
+    
+    def _run_single_asset_portfolio(
+        self, 
+        data: pd.DataFrame, 
+        backtester_class, 
+        strategy_classes: Dict,
+        custom_strategies_config: Dict = None
+    ) -> Dict:
+        """Run portfolio test on single asset (original functionality)"""
+        
+        # Initialize portfolio manager for single asset (original approach)
         self.portfolio_manager = PortfolioManager(
             initial_capital=self.initial_capital,
-            assets=self.assets,
+            assets=self.assets,  # Should be single asset list like ['MSFT']
             strategies_config=custom_strategies_config
         )
         
-        # Run the portfolio backtest
+        # Run the portfolio backtest (original approach)
         self.results = self.portfolio_manager.run_portfolio_backtest(
             data, backtester_class, strategy_classes
         )
+        
+        return self.results
+    
+    def _run_multiple_assets_portfolio(
+        self, 
+        data: Dict[str, pd.DataFrame], 
+        backtester_class, 
+        strategy_classes: Dict,
+        custom_strategies_config: Dict = None
+    ) -> Dict:
+        """NEW: Run TRUE portfolio test across multiple assets simultaneously"""
+        
+        logger.info("🏆 RUNNING TRUE ULTIMATE PORTFOLIO BACKTEST (MULTIPLE ASSETS)")
+        
+        # Use default strategy config if none provided
+        if custom_strategies_config is None:
+            strategies_config = {
+                'Technical Analysis': {
+                    'class': 'TechnicalAnalysisStrategy',
+                    'params': {}
+                },
+                'MLTrading Strategy': {
+                    'class': 'MLTradingStrategy', 
+                    'params': {'confidence_threshold': 0.40}
+                }
+            }
+        else:
+            strategies_config = custom_strategies_config
+        
+        # Get available assets from data
+        available_assets = list(data.keys())
+        
+        # Calculate capital allocation
+        total_combinations = len(strategies_config) * len(available_assets)
+        capital_per_combination = self.initial_capital // total_combinations
+        combination_weight = 1.0 / total_combinations
+        
+        logger.info(f"📊 Portfolio Configuration:")
+        logger.info(f"   Assets: {available_assets}")
+        logger.info(f"   Strategies: {list(strategies_config.keys())}")
+        logger.info(f"   Total combinations: {total_combinations}")
+        logger.info(f"   Capital per combination: ${capital_per_combination:,}")
+        
+        # Run all strategy-asset combinations
+        total_return = 0
+        total_trades = 0
+        all_combination_results = []
+        portfolio_breakdown = {}
+        
+        for strategy_name, strategy_config in strategies_config.items():
+            logger.info(f"📊 Testing {strategy_name}:")
+            portfolio_breakdown[strategy_name] = {}
+            
+            for asset in available_assets:
+                combination_name = f"{strategy_name}_{asset}"
+                logger.info(f"   {combination_name} (${capital_per_combination:,} capital):")
+                
+                try:
+                    # Create strategy instance
+                    strategy_class_name = strategy_config.get('class', strategy_name.replace(' ', ''))
+                    if strategy_class_name not in strategy_classes:
+                        raise ValueError(f"Strategy class {strategy_class_name} not found")
+                    
+                    strategy_class = strategy_classes[strategy_class_name]
+                    strategy_params = strategy_config.get('params', {})
+                    
+                    # Create strategy with parameters
+                    if strategy_params:
+                        strategy = strategy_class(**strategy_params)
+                    else:
+                        strategy = strategy_class()
+                    
+                    # Create backtester with allocated capital
+                    backtester = backtester_class(
+                        initial_capital=capital_per_combination,
+                        transaction_cost=0.001,
+                        max_position_size=1.0
+                    )
+                    
+                    backtester.set_strategy(strategy)
+                    results = backtester.run_backtest(data[asset])
+                    
+                    # Calculate combination results
+                    combination_return = results['total_return']
+                    combination_trades = results['total_trades']
+                    
+                    # Add to portfolio totals
+                    total_return += combination_return * combination_weight
+                    total_trades += combination_trades
+                    
+                    # Store combination details
+                    combination_result = {
+                        'strategy': strategy_name,
+                        'asset': asset,
+                        'return': combination_return,
+                        'trades': combination_trades,
+                        'win_rate': results.get('win_rate', 0),
+                        'sharpe': results.get('sharpe_ratio', 0),
+                        'capital': capital_per_combination,
+                        'final_value': capital_per_combination * (1 + combination_return),
+                        'weight': combination_weight,
+                        'backtester': backtester  # Store for potential signal extraction
+                    }
+                    
+                    all_combination_results.append(combination_result)
+                    portfolio_breakdown[strategy_name][asset] = combination_result
+                    
+                    logger.info(f"      Return: {combination_return*100:+6.2f}%")
+                    logger.info(f"      Trades: {combination_trades}")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Error: {e}")
+        
+        # Calculate portfolio-level metrics
+        total_final_value = sum(result['final_value'] for result in all_combination_results)
+        portfolio_win_rate = np.mean([result['win_rate'] for result in all_combination_results]) if all_combination_results else 0
+        portfolio_sharpe = np.mean([result['sharpe'] for result in all_combination_results]) if all_combination_results else 0
+        
+        # Create portfolio results (matching the original format)
+        self.results = {
+            'strategy_name': "🏆 Ultimate Portfolio Strategy",
+            'total_return': total_return,
+            'total_trades': total_trades,
+            'trade_frequency_monthly': total_trades / 12,  # Default to annual
+            'combinations': len(all_combination_results),
+            'individual_results': all_combination_results,
+            'portfolio_breakdown': portfolio_breakdown,
+            'methodology': 'Portfolio Manager (split capital - multiple assets)',
+            'win_rate': portfolio_win_rate,
+            'sharpe_ratio': portfolio_sharpe,
+            'final_value': total_final_value,
+            'initial_capital': self.initial_capital
+        }
+        
+        logger.info(f"🎯 SPLIT-CAPITAL MULTI-STRATEGY PERFORMANCE:")
+        logger.info(f"   Portfolio Return: {total_return*100:+6.2f}%")
+        logger.info(f"   Total Trades: {total_trades}")
+        logger.info(f"   Final Value: ${total_final_value:,.2f}")
+        logger.info(f"   Assets: {len(available_assets)}")
+        logger.info(f"   Combinations: {len(all_combination_results)}")
         
         return self.results
     
@@ -399,12 +557,14 @@ class UltimatePortfolioRunner:
             if isinstance(results, dict) and 'total_return' in results:
                 logger.info(f"   📊 {strategy_name}: {results['total_return']*100:+6.2f}% return, {results['total_trades']} trades")
         
-        # Run verification
-        verification = self.portfolio_manager.verify_portfolio_calculation(
-            individual_results, self.results
-        )
+        # Run verification if portfolio_manager exists (single asset case)
+        if self.portfolio_manager:
+            verification = self.portfolio_manager.verify_portfolio_calculation(
+                individual_results, self.results
+            )
+            return verification
         
-        return verification
+        return {"comparison": "multiple assets - verification not implemented"}
     
     def get_signals_and_trades_for_visualization(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -414,11 +574,54 @@ class UltimatePortfolioRunner:
             Tuple of (signals_df, trades_df)
         """
         
-        if not self.results or not self.portfolio_manager:
+        if not self.results:
             return pd.DataFrame(), pd.DataFrame()
         
-        return self.portfolio_manager.get_combined_signals_and_trades(self.results)
-
+        # For single asset case, use the portfolio manager
+        if self.portfolio_manager:
+            return self.portfolio_manager.get_combined_signals_and_trades(self.results)
+        
+        # For multiple assets case, extract from individual results
+        try:
+            all_signals = []
+            all_trades = []
+            
+            if 'individual_results' in self.results:
+                for combination_result in self.results['individual_results']:
+                    if 'backtester' in combination_result:
+                        backtester = combination_result['backtester']
+                        strategy_name = combination_result['strategy']
+                        asset = combination_result['asset']
+                        
+                        # Get signals
+                        signals_df = backtester.get_signals_history()
+                        if not signals_df.empty:
+                            signals_df = signals_df.copy()
+                            signals_df['strategy_source'] = strategy_name
+                            signals_df['asset'] = asset
+                            signals_df['combination'] = f"{strategy_name}_{asset}"
+                            all_signals.append(signals_df)
+                        
+                        # Get trades
+                        trades_df = backtester.get_trade_history()
+                        if not trades_df.empty:
+                            trades_df = trades_df.copy()
+                            trades_df['strategy_source'] = strategy_name
+                            trades_df['asset'] = asset
+                            trades_df['combination'] = f"{strategy_name}_{asset}"
+                            all_trades.append(trades_df)
+            
+            # Combine DataFrames
+            combined_signals = pd.concat(all_signals, ignore_index=True) if all_signals else pd.DataFrame()
+            combined_trades = pd.concat(all_trades, ignore_index=True) if all_trades else pd.DataFrame()
+            
+            return combined_signals, combined_trades
+            
+        except Exception as e:
+            logger.error(f"Error extracting signals/trades: {e}")
+            return pd.DataFrame(), pd.DataFrame()
+    
+    # ADD these utility functions at the END of portfolio_manager.py:
 
 # Utility functions
 def create_default_strategy_config() -> Dict:
