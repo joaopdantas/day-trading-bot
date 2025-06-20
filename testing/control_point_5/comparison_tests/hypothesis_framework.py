@@ -251,30 +251,39 @@ def get_h4_benchmarks_period_adjusted(months=12):
 
 def get_h1_benchmarks_period_adjusted(months=12, is_multistocks=False):
     """
-    FIXED: H1: Trading Programs (Period-Adjusted like H2, H3, H4)
+    FIXED: H1: Trading Programs (Period-Adjusted for ALL tests - single AND multi)
     
     Args:
         months: Number of months for the test period
         is_multistocks: True for multistocks tests, False for single stock
     """
     
-    if not is_multistocks:
-        # SINGLE STOCK: Use the real MSFT 2024 data (no adjustment needed)
-        return get_h1_benchmarks_single_stock_1year()
-    
-    # MULTISTOCKS: Base annual benchmarks that need period adjustment
-    base_benchmarks = {
-        'Multi-Asset Momentum Strategy': {
-            'annual_return': 0.18, 'annual_trades': 45, 'win_rate': 58.0,
-            'annual_sharpe': 1.2, 'description': 'Momentum strategy across MSFT, AAPL, GOOGL, AMZN, TSLA only'
-        },
-        'Portfolio Rotation Strategy': {
-            'annual_return': 0.12, 'annual_trades': 24, 'win_rate': 62.5,
-            'annual_sharpe': 0.8, 'description': 'Sector rotation across MSFT, AAPL, GOOGL, AMZN, TSLA only'
+    if is_multistocks:
+        # MULTISTOCKS: Base annual benchmarks that need period adjustment
+        base_benchmarks = {
+            'Multi-Asset Momentum Strategy': {
+                'annual_return': 0.18, 'annual_trades': 45, 'win_rate': 58.0,
+                'annual_sharpe': 1.2, 'description': 'Momentum strategy across MSFT, AAPL, GOOGL, AMZN, TSLA only'
+            },
+            'Portfolio Rotation Strategy': {
+                'annual_return': 0.12, 'annual_trades': 24, 'win_rate': 62.5,
+                'annual_sharpe': 0.8, 'description': 'Sector rotation across MSFT, AAPL, GOOGL, AMZN, TSLA only'
+            }
         }
-    }
+    else:
+        # SINGLE STOCK: FIXED - Now also period-adjusted for fair comparison
+        base_benchmarks = {
+            'TradingView Strategy': {
+                'annual_return': 0.3539, 'annual_trades': 92, 'win_rate': 64.13,
+                'annual_sharpe': -0.263, 'description': 'REAL TRADINGVIEW STRATEGY (MSFT 2024)'
+            },
+            'Systematic Strategy': {
+                'annual_return': 0.0429, 'annual_trades': 12, 'win_rate': 58.0,
+                'annual_sharpe': 0.67, 'description': 'REAL SYSTEMATIC STRATEGY (MSFT 2024)'
+            }
+        }
     
-    # Adjust for period (same logic as H2, H3, H4)
+    # Apply period adjustment to ALL H1 benchmarks (same logic as H2, H3, H4)
     adjusted_benchmarks = {}
     period_label = f"({months}M)" if months != 12 else "(Annual)"
     

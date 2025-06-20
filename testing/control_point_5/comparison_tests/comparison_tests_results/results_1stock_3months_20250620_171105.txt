@@ -1,0 +1,167 @@
+HYPOTHESIS TESTING RESULTS: Single Stock (MSFT), 3 Months (Q4 2024)
+======================================================================
+Generated: 2025-06-20 17:11:05
+Test Configuration: 1stock_3months
+Assets: MSFT
+Period: 2024-10-01 to 2024-12-31
+Capital: $10,000
+Duration: 3 months
+
+MLTrading Strategy:
+  initial_capital: 10000
+  final_value: 9840.88623
+  total_return: -0.015911376999999994
+  benchmark_return: 0.001925408257862089
+  alpha: -0.017836785257862083
+  trading_days: 44
+  total_trades: 1
+  buy_trades: 1
+  sell_trades: 0
+  win_rate: 0.0
+  sharpe_ratio: -0.6222813996164283
+  max_drawdown: 0.07152395653967471
+  volatility: 0.13601487182775013
+  average_daily_return: -0.0003358711301969105
+  hit_rate: 0.27906976744186046
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: MLTrading Strategy
+
+Technical Analysis Strategy:
+  initial_capital: 10000
+  final_value: 10000.0
+  total_return: 0.0
+  benchmark_return: 0.001925408257862089
+  alpha: -0.001925408257862089
+  trading_days: 44
+  total_trades: 0
+  buy_trades: 0
+  sell_trades: 0
+  win_rate: 0.0
+  sharpe_ratio: 0
+  max_drawdown: 0
+  volatility: 0.0
+  average_daily_return: 0.0
+  hit_rate: 0.0
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Technical Analysis Strategy
+
+Hybrid RSI-ML:
+  initial_capital: 10000
+  final_value: 9624.94158
+  total_return: -0.03750584199999994
+  benchmark_return: 0.001925408257862089
+  alpha: -0.03943125025786203
+  trading_days: 44
+  total_trades: 1
+  buy_trades: 1
+  sell_trades: 0
+  win_rate: 0.0
+  sharpe_ratio: -4.25851297622287
+  max_drawdown: 0.03750584199999994
+  volatility: 0.052260415022782516
+  average_daily_return: -0.0008831414901480634
+  hit_rate: 0.0
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Hybrid RSI-ML
+
+Hybrid RSI-Technical:
+  initial_capital: 10000
+  final_value: 9624.94158
+  total_return: -0.03750584199999994
+  benchmark_return: 0.001925408257862089
+  alpha: -0.03943125025786203
+  trading_days: 44
+  total_trades: 1
+  buy_trades: 1
+  sell_trades: 0
+  win_rate: 0.0
+  sharpe_ratio: -4.25851297622287
+  max_drawdown: 0.03750584199999994
+  volatility: 0.052260415022782516
+  average_daily_return: -0.0008831414901480634
+  hit_rate: 0.0
+  stop_losses_triggered: 0
+  take_profits_triggered: 0
+  strategy_name: Hybrid RSI-Technical
+
+Split-Capital Multi-Strategy:
+  strategy_name: 🏆 Ultimate Portfolio Strategy
+  total_return: 0.028146304999999937
+  total_trades: 2
+  trade_frequency_monthly: 0.16666666666666666
+  combinations: 2
+  individual_results: [{'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.0, 'trades': 0, 'win_rate': 0.0, 'sharpe': 0, 'capital': 5000, 'final_value': 5000.0, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000001AA3D77B090>}, {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.056292609999999875, 'trades': 2, 'win_rate': 1.0, 'sharpe': 4.263630649781748, 'capital': 5000, 'final_value': 5281.463049999999, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000001AA3D3CFE10>}]
+  portfolio_breakdown: {'Technical Analysis': {'MSFT': {'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.0, 'trades': 0, 'win_rate': 0.0, 'sharpe': 0, 'capital': 5000, 'final_value': 5000.0, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000001AA3D77B090>}}, 'MLTrading Strategy': {'MSFT': {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.056292609999999875, 'trades': 2, 'win_rate': 1.0, 'sharpe': 4.263630649781748, 'capital': 5000, 'final_value': 5281.463049999999, 'weight': 0.5, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000001AA3D3CFE10>}}}
+  methodology: Portfolio Manager (split capital)
+  win_rate: 0.5
+  sharpe_ratio: 2.131815324890874
+  final_value: 10281.463049999998
+  initial_capital: 10000
+
+H1: TradingView Strategy:
+  strategy_name: H1: TradingView Strategy
+  total_return: 0.07868998618365541
+  total_trades: 23
+  win_rate: 64.13
+  sharpe_ratio: -0.1315
+  data_source: PERIOD-ADJUSTED (REAL TRADINGVIEW STRATEGY (MSFT 2024)) - (3M)
+
+H1: Systematic Strategy:
+  strategy_name: H1: Systematic Strategy
+  total_return: 0.010556655952515648
+  total_trades: 3
+  win_rate: 58.0
+  sharpe_ratio: 0.335
+  data_source: PERIOD-ADJUSTED (REAL SYSTEMATIC STRATEGY (MSFT 2024)) - (3M)
+
+H2: Cathie Wood (Single Stock Style):
+  strategy_name: H2: Cathie Wood (Single Stock Style)
+  total_return: 0.02411368908444511
+  total_trades: 30
+  win_rate: 48.0
+  sharpe_ratio: 0.14
+  data_source: REAL DATA (Innovation investing (single stock)) - (3M) Single
+
+H2: Warren Buffett (Single Stock Style):
+  strategy_name: H2: Warren Buffett (Single Stock Style)
+  total_return: 0.042246635456321124
+  total_trades: 2
+  win_rate: 70.0
+  sharpe_ratio: 0.6
+  data_source: REAL DATA (Value investing (single stock)) - (3M) Single
+
+H2: Ray Dalio (Single Stock Style):
+  strategy_name: H2: Ray Dalio (Single Stock Style)
+  total_return: 0.009853406548968824
+  total_trades: 1
+  win_rate: 68.0
+  sharpe_ratio: 0.225
+  data_source: REAL DATA (Risk-adjusted (single stock)) - (3M) Single
+
+H3: AI Single Stock Selector:
+  strategy_name: H3: AI Single Stock Selector
+  total_return: 0.0509691250073554
+  total_trades: 20
+  win_rate: 54.0
+  sharpe_ratio: 0.6
+  data_source: REAL DATA (AI single stock selection) - (3M) Single
+
+H3: Robo-Advisor Single Stock:
+  strategy_name: H3: Robo-Advisor Single Stock
+  total_return: 0.01586828478278357
+  total_trades: 4
+  win_rate: 59.0
+  sharpe_ratio: 0.24
+  data_source: REAL DATA (AI single stock management) - (3M) Single
+
+H4: Beginner Trader:
+  strategy_name: H4: Beginner Trader
+  total_return: -0.03981541059581217
+  total_trades: 17
+  win_rate: 41.0
+  sharpe_ratio: -0.115
+  data_source: Academic research on retail trader performance - (3M)
+
