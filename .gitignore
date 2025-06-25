@@ -5,7 +5,7 @@ __pycache__/
 *.so
 .Python
 venv/
-ENV/
+*ENV/
 build/
 develop-eggs/
 dist/
@@ -21,6 +21,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*node_modules/
 
 # Jupyter Notebook
 .ipynb_checkpoints
