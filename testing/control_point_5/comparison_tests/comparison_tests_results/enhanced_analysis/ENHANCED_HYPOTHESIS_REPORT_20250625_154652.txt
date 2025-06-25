@@ -1,18 +1,18 @@
 🏆 ENHANCED COMPREHENSIVE HYPOTHESIS TESTING ANALYSIS 🏆
 ===========================================================================
-Generated: 2025-06-20 18:32:33
+Generated: 2025-06-25 15:46:55
 
 📊 EXECUTIVE SUMMARY
 -----------------------------------
 Test Configurations Analyzed: 6
-Our Trading Strategies: 30
+Our Trading Strategies: 42
 H1-H4 Benchmarks: 48
 
 🧪 HYPOTHESIS VALIDATION RESULTS
 ----------------------------------------
-Our Strategies Average Return: +15.87%
+Our Strategies Average Return: +8.21%
 H1-H4 Benchmarks Average: +6.40%
-Performance Difference: +9.47%
+Performance Difference: +1.81%
 ✅ HYPOTHESIS VALIDATED: Our strategies outperform benchmarks!
 
 📈 DETAILED PERFORMANCE ANALYSIS
@@ -86,14 +86,22 @@ H1-H4 Benchmarks:
 
 MULTISTOCKS 1YEAR:
 Our Strategies:
-  • MLTrading Strategy:
-    Return: +98.65% | Trades: 12.0 | Win Rate: 33.3% | Sharpe: 1.848
-  • Technical Analysis Strategy:
-    Return: +21.62% | Trades: 6.0 | Win Rate: 100.0% | Sharpe: 2.158
-  • Hybrid RSI-ML:
-    Return: +17.67% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 1.735
-  • Hybrid RSI-Technical:
-    Return: +17.67% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 1.735
+  • MLTrading Strategy (Average):
+    Return: +23.32% | Trades: 55.0 | Win Rate: 53.1% | Sharpe: 0.672
+  • MLTrading Strategy (Realistic):
+    Return: +39.03% | Trades: 33.0 | Win Rate: 45.1% | Sharpe: 0.605
+  • Technical Analysis Strategy (Average):
+    Return: +12.97% | Trades: 18.0 | Win Rate: 70.0% | Sharpe: 1.136
+  • Technical Analysis Strategy (Realistic):
+    Return: +13.23% | Trades: 10.0 | Win Rate: 59.5% | Sharpe: 1.022
+  • Hybrid RSI-ML (Average):
+    Return:  +9.22% | Trades: 23.0 | Win Rate: 62.0% | Sharpe: 0.766
+  • Hybrid RSI-ML (Realistic):
+    Return:  +9.99% | Trades: 13.0 | Win Rate: 52.7% | Sharpe: 0.690
+  • Hybrid RSI-Technical (Average):
+    Return:  +9.22% | Trades: 23.0 | Win Rate: 62.0% | Sharpe: 0.766
+  • Hybrid RSI-Technical (Realistic):
+    Return:  +9.99% | Trades: 13.0 | Win Rate: 52.7% | Sharpe: 0.690
   • Split-Capital Multi-Strategy:
     Return: +16.51% | Trades: 73.0 | Win Rate: 61.5% | Sharpe: 0.856
 H1-H4 Benchmarks:
@@ -108,14 +116,22 @@ H1-H4 Benchmarks:
 
 MULTISTOCKS 3MONTHS:
 Our Strategies:
-  • MLTrading Strategy:
-    Return: +49.09% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 6.806
-  • Technical Analysis Strategy:
-    Return:  +6.22% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 6.145
-  • Hybrid RSI-ML:
-    Return:  +6.22% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 6.145
-  • Hybrid RSI-Technical:
-    Return:  +6.22% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 6.145
+  • MLTrading Strategy (Average):
+    Return: +10.53% | Trades: 11.0 | Win Rate: 70.0% | Sharpe: 2.364
+  • MLTrading Strategy (Realistic):
+    Return: +12.23% | Trades: 7.0 | Win Rate: 52.5% | Sharpe: 1.891
+  • Technical Analysis Strategy (Average):
+    Return:  +1.24% | Trades: 2.0 | Win Rate: 20.0% | Sharpe: 1.229
+  • Technical Analysis Strategy (Realistic):
+    Return:  +1.49% | Trades: 1.0 | Win Rate: 15.0% | Sharpe: 0.983
+  • Hybrid RSI-ML (Average):
+    Return:  +0.49% | Trades: 3.0 | Win Rate: 20.0% | Sharpe: 0.377
+  • Hybrid RSI-ML (Realistic):
+    Return:  +1.01% | Trades: 2.0 | Win Rate: 15.0% | Sharpe: 0.302
+  • Hybrid RSI-Technical (Average):
+    Return:  +0.49% | Trades: 3.0 | Win Rate: 20.0% | Sharpe: 0.377
+  • Hybrid RSI-Technical (Realistic):
+    Return:  +1.01% | Trades: 2.0 | Win Rate: 15.0% | Sharpe: 0.302
   • Split-Capital Multi-Strategy:
     Return:  +1.08% | Trades: 9.0 | Win Rate: 40.0% | Sharpe: 1.182
 H1-H4 Benchmarks:
@@ -130,14 +146,22 @@ H1-H4 Benchmarks:
 
 MULTISTOCKS 6MONTHS:
 Our Strategies:
-  • MLTrading Strategy:
-    Return: +92.04% | Trades: 4.0 | Win Rate: 100.0% | Sharpe: 3.128
-  • Technical Analysis Strategy:
-    Return: +25.34% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 1.832
-  • Hybrid RSI-ML:
-    Return: +25.34% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 1.832
-  • Hybrid RSI-Technical:
-    Return: +25.34% | Trades: 2.0 | Win Rate: 100.0% | Sharpe: 1.832
+  • MLTrading Strategy (Average):
+    Return: +22.94% | Trades: 29.0 | Win Rate: 61.7% | Sharpe: 1.179
+  • MLTrading Strategy (Realistic):
+    Return: +32.17% | Trades: 18.0 | Win Rate: 49.3% | Sharpe: 1.002
+  • Technical Analysis Strategy (Average):
+    Return:  +7.91% | Trades: 12.0 | Win Rate: 80.0% | Sharpe: 0.990
+  • Technical Analysis Strategy (Realistic):
+    Return:  +9.82% | Trades: 7.0 | Win Rate: 64.0% | Sharpe: 0.841
+  • Hybrid RSI-ML (Average):
+    Return:  +6.72% | Trades: 17.0 | Win Rate: 75.0% | Sharpe: 0.792
+  • Hybrid RSI-ML (Realistic):
+    Return:  +9.10% | Trades: 11.0 | Win Rate: 60.0% | Sharpe: 0.673
+  • Hybrid RSI-Technical (Average):
+    Return:  +6.72% | Trades: 17.0 | Win Rate: 75.0% | Sharpe: 0.792
+  • Hybrid RSI-Technical (Realistic):
+    Return:  +9.10% | Trades: 11.0 | Win Rate: 60.0% | Sharpe: 0.673
   • Split-Capital Multi-Strategy:
     Return: +12.60% | Trades: 41.0 | Win Rate: 70.8% | Sharpe: 1.063
 H1-H4 Benchmarks:
@@ -155,13 +179,13 @@ H1-H4 Benchmarks:
 ----------------------------------------
 
 🥇 Best Overall Return: 🏆 OUR STRATEGY
-   Strategy: MLTrading Strategy
-   Value: 98.654%
+   Strategy: MLTrading Strategy (Realistic)
+   Value: 39.031%
    Configuration: Multistocks 1Year
 
 🥇 Best Risk-Adjusted (Sharpe): 🏆 OUR STRATEGY
-   Strategy: MLTrading Strategy
-   Value: 6.806
+   Strategy: MLTrading Strategy (Average)
+   Value: 2.364
    Configuration: Multistocks 3Months
 
 🥇 Best Win Rate: 🏆 OUR STRATEGY
@@ -170,9 +194,9 @@ H1-H4 Benchmarks:
    Configuration: 1Stock 1Year
 
 🥇 Best Trade Efficiency: 🏆 OUR STRATEGY
-   Strategy: MLTrading Strategy
-   Value: 24.543
-   Configuration: Multistocks 3Months
+   Strategy: Technical Analysis Strategy
+   Value: 3.603
+   Configuration: 1Stock 1Year
 
 
 💡 ENHANCED STRATEGIC RECOMMENDATIONS

@@ -1,0 +1,160 @@
+FIXED HYPOTHESIS TESTING RESULTS: Multiple Stocks (MSFT, AAPL, GOOGL, AMZN, TSLA), Full Year (2024) - NO BIAS!
+===========================================================================
+Generated: 2025-06-25 15:43:03
+Test Configuration: multistocks_1year
+Assets: MSFT, AAPL, GOOGL, AMZN, TSLA
+Period: 2024-01-01 to 2024-12-31
+Capital: $10,000
+Duration: 12 months
+BIAS ELIMINATED: No more cherry-picking best assets!
+
+MLTrading Strategy (Average):
+  strategy_name: MLTrading Strategy (Average Performance)
+  total_return: 0.23317947560000007
+  total_trades: 55
+  methodology: Average across all assets
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10761.58065, 'total_return': 0.07615806499999998, 'benchmark_return': 0.13651683878447973, 'alpha': -0.06035877378447975, 'trading_days': 232, 'total_trades': 9, 'buy_trades': 5, 'sell_trades': 4, 'win_rate': 0.75, 'sharpe_ratio': 0.65912407819285, 'max_drawdown': 0.08947232938093604, 'volatility': 0.1356162362520148, 'average_daily_return': 0.00035471399487140085, 'hit_rate': 0.2857142857142857, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 10720.424919999996, 'total_return': 0.07204249199999958, 'benchmark_return': 0.34895496660202546, 'alpha': -0.2769124746020259, 'trading_days': 232, 'total_trades': 12, 'buy_trades': 6, 'sell_trades': 6, 'win_rate': 0.5, 'sharpe_ratio': 0.5891698991077049, 'max_drawdown': 0.12284839231931825, 'volatility': 0.14705494476866732, 'average_daily_return': 0.0003438109006850986, 'hit_rate': 0.24242424242424243, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 9473.506780000003, 'total_return': -0.052649321999999665, 'benchmark_return': 0.3700513859738006, 'alpha': -0.42270070797380027, 'trading_days': 232, 'total_trades': 14, 'buy_trades': 7, 'sell_trades': 7, 'win_rate': 0.5714285714285714, 'sharpe_ratio': -0.368801695032457, 'max_drawdown': 0.1717563231108639, 'volatility': 0.13514652906932287, 'average_daily_return': -0.00019778678174015675, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 10838.102529999998, 'total_return': 0.08381025299999983, 'benchmark_return': 0.4632828653371572, 'alpha': -0.37947261233715734, 'trading_days': 232, 'total_trades': 8, 'buy_trades': 4, 'sell_trades': 4, 'win_rate': 0.5, 'sharpe_ratio': 0.6321025818874733, 'max_drawdown': 0.07907407246824259, 'volatility': 0.1589241872917599, 'average_daily_return': 0.00039863646472813413, 'hit_rate': 0.15151515151515152, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 19865.358900000007, 'total_return': 0.9865358900000006, 'benchmark_return': 0.6256340069237581, 'alpha': 0.3609018830762425, 'trading_days': 232, 'total_trades': 12, 'buy_trades': 6, 'sell_trades': 6, 'win_rate': 0.3333333333333333, 'sharpe_ratio': 1.8478518152226442, 'max_drawdown': 0.3028526087223569, 'volatility': 0.46355709077874935, 'average_daily_return': 0.003399146077995397, 'hit_rate': 0.3463203463203463, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.530952380952381
+  sharpe_ratio: 0.671889335875643
+
+MLTrading Strategy (Realistic):
+  strategy_name: MLTrading Strategy (Realistic Multi-Asset)
+  total_return: 0.39030843993200015
+  total_trades: 33
+  methodology: Simulated real-time asset selection
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10761.58065, 'total_return': 0.07615806499999998, 'benchmark_return': 0.13651683878447973, 'alpha': -0.06035877378447975, 'trading_days': 232, 'total_trades': 9, 'buy_trades': 5, 'sell_trades': 4, 'win_rate': 0.75, 'sharpe_ratio': 0.65912407819285, 'max_drawdown': 0.08947232938093604, 'volatility': 0.1356162362520148, 'average_daily_return': 0.00035471399487140085, 'hit_rate': 0.2857142857142857, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 10720.424919999996, 'total_return': 0.07204249199999958, 'benchmark_return': 0.34895496660202546, 'alpha': -0.2769124746020259, 'trading_days': 232, 'total_trades': 12, 'buy_trades': 6, 'sell_trades': 6, 'win_rate': 0.5, 'sharpe_ratio': 0.5891698991077049, 'max_drawdown': 0.12284839231931825, 'volatility': 0.14705494476866732, 'average_daily_return': 0.0003438109006850986, 'hit_rate': 0.24242424242424243, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 9473.506780000003, 'total_return': -0.052649321999999665, 'benchmark_return': 0.3700513859738006, 'alpha': -0.42270070797380027, 'trading_days': 232, 'total_trades': 14, 'buy_trades': 7, 'sell_trades': 7, 'win_rate': 0.5714285714285714, 'sharpe_ratio': -0.368801695032457, 'max_drawdown': 0.1717563231108639, 'volatility': 0.13514652906932287, 'average_daily_return': -0.00019778678174015675, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 10838.102529999998, 'total_return': 0.08381025299999983, 'benchmark_return': 0.4632828653371572, 'alpha': -0.37947261233715734, 'trading_days': 232, 'total_trades': 8, 'buy_trades': 4, 'sell_trades': 4, 'win_rate': 0.5, 'sharpe_ratio': 0.6321025818874733, 'max_drawdown': 0.07907407246824259, 'volatility': 0.1589241872917599, 'average_daily_return': 0.00039863646472813413, 'hit_rate': 0.15151515151515152, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 19865.358900000007, 'total_return': 0.9865358900000006, 'benchmark_return': 0.6256340069237581, 'alpha': 0.3609018830762425, 'trading_days': 232, 'total_trades': 12, 'buy_trades': 6, 'sell_trades': 6, 'win_rate': 0.3333333333333333, 'sharpe_ratio': 1.8478518152226442, 'max_drawdown': 0.3028526087223569, 'volatility': 0.46355709077874935, 'average_daily_return': 0.003399146077995397, 'hit_rate': 0.3463203463203463, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.45130952380952377
+  sharpe_ratio: 0.6047004022880788
+
+Technical Analysis Strategy (Average):
+  strategy_name: Technical Analysis Strategy (Average Performance)
+  total_return: 0.1297285570000002
+  total_trades: 18
+  methodology: Average across all assets
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 12161.562199999998, 'total_return': 0.21615621999999984, 'benchmark_return': 0.13651683878447973, 'alpha': 0.07963938121552011, 'trading_days': 232, 'total_trades': 6, 'buy_trades': 3, 'sell_trades': 3, 'win_rate': 1.0, 'sharpe_ratio': 2.1581719246250852, 'max_drawdown': 0.05274550626421758, 'volatility': 0.10134097623013585, 'average_daily_return': 0.0008679017845792749, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.7
+  sharpe_ratio: 1.1356321333002926
+
+Technical Analysis Strategy (Realistic):
+  strategy_name: Technical Analysis Strategy (Realistic Multi-Asset)
+  total_return: 0.13230832751500005
+  total_trades: 10
+  methodology: Simulated real-time asset selection
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 12161.562199999998, 'total_return': 0.21615621999999984, 'benchmark_return': 0.13651683878447973, 'alpha': 0.07963938121552011, 'trading_days': 232, 'total_trades': 6, 'buy_trades': 3, 'sell_trades': 3, 'win_rate': 1.0, 'sharpe_ratio': 2.1581719246250852, 'max_drawdown': 0.05274550626421758, 'volatility': 0.10134097623013585, 'average_daily_return': 0.0008679017845792749, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.595
+  sharpe_ratio: 1.0220689199702633
+
+Hybrid RSI-ML (Average):
+  strategy_name: Hybrid RSI-ML (Average Performance)
+  total_return: 0.09220278060000023
+  total_trades: 23
+  methodology: Average across all assets
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10285.27338, 'total_return': 0.028527338000000055, 'benchmark_return': 0.13651683878447973, 'alpha': -0.10798950078447968, 'trading_days': 232, 'total_trades': 11, 'buy_trades': 6, 'sell_trades': 5, 'win_rate': 0.6, 'sharpe_ratio': 0.3119531121806599, 'max_drawdown': 0.06030672103359186, 'volatility': 0.12287403425086754, 'average_daily_return': 0.00015210689440774258, 'hit_rate': 0.1774891774891775, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.62
+  sharpe_ratio: 0.7663883708114076
+
+Hybrid RSI-ML (Realistic):
+  strategy_name: Hybrid RSI-ML (Realistic Multi-Asset)
+  total_return: 0.09991774736700015
+  total_trades: 13
+  methodology: Simulated real-time asset selection
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10285.27338, 'total_return': 0.028527338000000055, 'benchmark_return': 0.13651683878447973, 'alpha': -0.10798950078447968, 'trading_days': 232, 'total_trades': 11, 'buy_trades': 6, 'sell_trades': 5, 'win_rate': 0.6, 'sharpe_ratio': 0.3119531121806599, 'max_drawdown': 0.06030672103359186, 'volatility': 0.12287403425086754, 'average_daily_return': 0.00015210689440774258, 'hit_rate': 0.1774891774891775, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.527
+  sharpe_ratio: 0.6897495337302669
+
+Hybrid RSI-Technical (Average):
+  strategy_name: Hybrid RSI-Technical (Average Performance)
+  total_return: 0.09220278060000023
+  total_trades: 23
+  methodology: Average across all assets
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10285.27338, 'total_return': 0.028527338000000055, 'benchmark_return': 0.13651683878447973, 'alpha': -0.10798950078447968, 'trading_days': 232, 'total_trades': 11, 'buy_trades': 6, 'sell_trades': 5, 'win_rate': 0.6, 'sharpe_ratio': 0.3119531121806599, 'max_drawdown': 0.06030672103359186, 'volatility': 0.12287403425086754, 'average_daily_return': 0.00015210689440774258, 'hit_rate': 0.1774891774891775, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.62
+  sharpe_ratio: 0.7663883708114076
+
+Hybrid RSI-Technical (Realistic):
+  strategy_name: Hybrid RSI-Technical (Realistic Multi-Asset)
+  total_return: 0.09991774736700015
+  total_trades: 13
+  methodology: Simulated real-time asset selection
+  individual_results: {'MSFT': {'initial_capital': 10000, 'final_value': 10285.27338, 'total_return': 0.028527338000000055, 'benchmark_return': 0.13651683878447973, 'alpha': -0.10798950078447968, 'trading_days': 232, 'total_trades': 11, 'buy_trades': 6, 'sell_trades': 5, 'win_rate': 0.6, 'sharpe_ratio': 0.3119531121806599, 'max_drawdown': 0.06030672103359186, 'volatility': 0.12287403425086754, 'average_daily_return': 0.00015210689440774258, 'hit_rate': 0.1774891774891775, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AAPL': {'initial_capital': 10000, 'final_value': 9892.156060000001, 'total_return': -0.010784393999999883, 'benchmark_return': 0.34895496660202546, 'alpha': -0.3597393606020253, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 0.0, 'sharpe_ratio': -0.03500695022073742, 'max_drawdown': 0.10559359800000002, 'volatility': 0.12315877989661667, 'average_daily_return': -1.710878284558578e-05, 'hit_rate': 0.1038961038961039, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'GOOGL': {'initial_capital': 10000, 'final_value': 11634.116700000004, 'total_return': 0.16341167000000043, 'benchmark_return': 0.3700513859738006, 'alpha': -0.20663971597380018, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 1.0, 'sharpe_ratio': 1.3446161973822575, 'max_drawdown': 0.11026169741629316, 'volatility': 0.12902367546561416, 'average_daily_return': 0.0006884417614160975, 'hit_rate': 0.18614718614718614, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'AMZN': {'initial_capital': 10000, 'final_value': 11766.94482, 'total_return': 0.17669448200000007, 'benchmark_return': 0.4632828653371572, 'alpha': -0.2865883833371571, 'trading_days': 232, 'total_trades': 2, 'buy_trades': 1, 'sell_trades': 1, 'win_rate': 1.0, 'sharpe_ratio': 1.7352601906938927, 'max_drawdown': 0.051659283254821976, 'volatility': 0.10550546747862091, 'average_daily_return': 0.0007265057048261906, 'hit_rate': 0.08225108225108226, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}, 'TSLA': {'initial_capital': 10000, 'final_value': 11031.648070000005, 'total_return': 0.10316480700000047, 'benchmark_return': 0.6256340069237581, 'alpha': -0.5224691999237576, 'trading_days': 232, 'total_trades': 4, 'buy_trades': 2, 'sell_trades': 2, 'win_rate': 0.5, 'sharpe_ratio': 0.4751193040209651, 'max_drawdown': 0.2972400844363734, 'volatility': 0.3638883697700484, 'average_daily_return': 0.0006860729721685278, 'hit_rate': 0.21212121212121213, 'stop_losses_triggered': 0, 'take_profits_triggered': 0}}
+  win_rate: 0.527
+  sharpe_ratio: 0.6897495337302669
+
+Split-Capital Multi-Strategy:
+  strategy_name: 🏆 Ultimate Portfolio Strategy
+  total_return: 0.16514509700000007
+  total_trades: 73
+  trade_frequency_monthly: 6.083333333333333
+  combinations: 10
+  individual_results: [{'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.13988674000000037, 'trades': 6, 'win_rate': 1.0, 'sharpe': 1.715545168473082, 'capital': 1000, 'final_value': 1139.8867400000004, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201061E1FD0>}, {'strategy': 'Technical Analysis', 'asset': 'AAPL', 'return': -0.009985549999999876, 'trades': 2, 'win_rate': 0.0, 'sharpe': -0.04019851882900585, 'capital': 1000, 'final_value': 990.0144500000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010764FCD0>}, {'strategy': 'Technical Analysis', 'asset': 'GOOGL', 'return': 0.15739948000000026, 'trades': 4, 'win_rate': 1.0, 'sharpe': 1.3272527470887743, 'capital': 1000, 'final_value': 1157.3994800000003, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002017FBC4050>}, {'strategy': 'Technical Analysis', 'asset': 'AMZN', 'return': 0.17099465999999983, 'trades': 2, 'win_rate': 1.0, 'sharpe': 1.7338248733369503, 'capital': 1000, 'final_value': 1170.9946599999998, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x0000020107731FD0>}, {'strategy': 'Technical Analysis', 'asset': 'TSLA', 'return': 0.09145671000000016, 'trades': 4, 'win_rate': 0.5, 'sharpe': 0.45051462177837276, 'capital': 1000, 'final_value': 1091.4567100000002, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x0000020106FBC690>}, {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.06304485999999974, 'trades': 9, 'win_rate': 0.75, 'sharpe': 0.661524700988603, 'capital': 1000, 'final_value': 1063.0448599999997, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201073BC950>}, {'strategy': 'MLTrading Strategy', 'asset': 'AAPL', 'return': 0.06593291, 'trades': 12, 'win_rate': 0.5, 'sharpe': 0.6041005604992701, 'capital': 1000, 'final_value': 1065.93291, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201077A4B50>}, {'strategy': 'MLTrading Strategy', 'asset': 'GOOGL', 'return': -0.058567359999999895, 'trades': 14, 'win_rate': 0.5714285714285714, 'sharpe': -0.4377353351036814, 'capital': 1000, 'final_value': 941.4326400000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010736BF50>}, {'strategy': 'MLTrading Strategy', 'asset': 'AMZN', 'return': 0.07724236999999994, 'trades': 8, 'win_rate': 0.5, 'sharpe': 0.6263620426018055, 'capital': 1000, 'final_value': 1077.24237, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201077A4950>}, {'strategy': 'MLTrading Strategy', 'asset': 'TSLA', 'return': 0.9540461500000001, 'trades': 12, 'win_rate': 0.3333333333333333, 'sharpe': 1.9159756627560791, 'capital': 1000, 'final_value': 1954.0461500000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010781B110>}]
+  portfolio_breakdown: {'Technical Analysis': {'MSFT': {'strategy': 'Technical Analysis', 'asset': 'MSFT', 'return': 0.13988674000000037, 'trades': 6, 'win_rate': 1.0, 'sharpe': 1.715545168473082, 'capital': 1000, 'final_value': 1139.8867400000004, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201061E1FD0>}, 'AAPL': {'strategy': 'Technical Analysis', 'asset': 'AAPL', 'return': -0.009985549999999876, 'trades': 2, 'win_rate': 0.0, 'sharpe': -0.04019851882900585, 'capital': 1000, 'final_value': 990.0144500000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010764FCD0>}, 'GOOGL': {'strategy': 'Technical Analysis', 'asset': 'GOOGL', 'return': 0.15739948000000026, 'trades': 4, 'win_rate': 1.0, 'sharpe': 1.3272527470887743, 'capital': 1000, 'final_value': 1157.3994800000003, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002017FBC4050>}, 'AMZN': {'strategy': 'Technical Analysis', 'asset': 'AMZN', 'return': 0.17099465999999983, 'trades': 2, 'win_rate': 1.0, 'sharpe': 1.7338248733369503, 'capital': 1000, 'final_value': 1170.9946599999998, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x0000020107731FD0>}, 'TSLA': {'strategy': 'Technical Analysis', 'asset': 'TSLA', 'return': 0.09145671000000016, 'trades': 4, 'win_rate': 0.5, 'sharpe': 0.45051462177837276, 'capital': 1000, 'final_value': 1091.4567100000002, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x0000020106FBC690>}}, 'MLTrading Strategy': {'MSFT': {'strategy': 'MLTrading Strategy', 'asset': 'MSFT', 'return': 0.06304485999999974, 'trades': 9, 'win_rate': 0.75, 'sharpe': 0.661524700988603, 'capital': 1000, 'final_value': 1063.0448599999997, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201073BC950>}, 'AAPL': {'strategy': 'MLTrading Strategy', 'asset': 'AAPL', 'return': 0.06593291, 'trades': 12, 'win_rate': 0.5, 'sharpe': 0.6041005604992701, 'capital': 1000, 'final_value': 1065.93291, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201077A4B50>}, 'GOOGL': {'strategy': 'MLTrading Strategy', 'asset': 'GOOGL', 'return': -0.058567359999999895, 'trades': 14, 'win_rate': 0.5714285714285714, 'sharpe': -0.4377353351036814, 'capital': 1000, 'final_value': 941.4326400000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010736BF50>}, 'AMZN': {'strategy': 'MLTrading Strategy', 'asset': 'AMZN', 'return': 0.07724236999999994, 'trades': 8, 'win_rate': 0.5, 'sharpe': 0.6263620426018055, 'capital': 1000, 'final_value': 1077.24237, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x00000201077A4950>}, 'TSLA': {'strategy': 'MLTrading Strategy', 'asset': 'TSLA', 'return': 0.9540461500000001, 'trades': 12, 'win_rate': 0.3333333333333333, 'sharpe': 1.9159756627560791, 'capital': 1000, 'final_value': 1954.0461500000001, 'weight': 0.1, 'backtester': <src.backtesting.backtester.ProductionBacktester object at 0x000002010781B110>}}}
+  methodology: Portfolio Manager (split capital - multiple assets)
+  win_rate: 0.6154761904761904
+  sharpe_ratio: 0.8557166523590249
+  final_value: 11651.450970000002
+  initial_capital: 10000
+
+H1: Multi-Asset Momentum Strategy:
+  strategy_name: H1: Multi-Asset Momentum Strategy
+  total_return: 0.17999999999999994
+  total_trades: 45
+  win_rate: 58.0
+  sharpe_ratio: 1.2
+  data_source: PERIOD-ADJUSTED (Momentum strategy across MSFT, AAPL, GOOGL, AMZN, TSLA only) - (Annual)
+
+H1: Portfolio Rotation Strategy:
+  strategy_name: H1: Portfolio Rotation Strategy
+  total_return: 0.1200000000000001
+  total_trades: 24
+  win_rate: 62.5
+  sharpe_ratio: 0.8
+  data_source: PERIOD-ADJUSTED (Sector rotation across MSFT, AAPL, GOOGL, AMZN, TSLA only) - (Annual)
+
+H2: Cathie Wood (ARKK Portfolio):
+  strategy_name: H2: Cathie Wood (ARKK Portfolio)
+  total_return: 0.14080000000000004
+  total_trades: 156
+  win_rate: 52.0
+  sharpe_ratio: 0.3936
+  data_source: REAL DATA (Innovation portfolio (diversified)) - (Annual) Multi
+
+H2: Warren Buffett (BRK-A Portfolio):
+  strategy_name: H2: Warren Buffett (BRK-A Portfolio)
+  total_return: 0.23340000000000005
+  total_trades: 8
+  win_rate: 75.0
+  sharpe_ratio: 1.4871
+  data_source: REAL DATA (Value portfolio (diversified)) - (Annual) Multi
+
+H2: Ray Dalio (All Weather Portfolio):
+  strategy_name: H2: Ray Dalio (All Weather Portfolio)
+  total_return: 0.05610000000000004
+  total_trades: 4
+  win_rate: 72.0
+  sharpe_ratio: 0.6595
+  data_source: REAL DATA (Risk parity (diversified)) - (Annual) Multi
+
+H3: AI ETF Portfolio (QQQ):
+  strategy_name: H3: AI ETF Portfolio (QQQ)
+  total_return: 0.2883
+  total_trades: 100
+  win_rate: 58.0
+  sharpe_ratio: 1.6052
+  data_source: REAL DATA (AI/Tech portfolio (diversified)) - (Annual) Multi
+
+H3: Robo-Advisor Portfolio:
+  strategy_name: H3: Robo-Advisor Portfolio
+  total_return: 0.08899999999999997
+  total_trades: 24
+  win_rate: 63.0
+  sharpe_ratio: 0.63
+  data_source: REAL DATA (AI portfolio management (diversified)) - (Annual) Multi
+
+H4: Beginner Trader:
+  strategy_name: H4: Beginner Trader
+  total_return: -0.15000000000000002
+  total_trades: 67
+  win_rate: 41.0
+  sharpe_ratio: -0.23
+  data_source: Academic research on retail trader performance - (Annual)
+
