@@ -2,7 +2,7 @@
 class TradingAssistant {
     constructor() {
         this.apiUrls = {
-            makesalot: 'https://your-app-name.onrender.com/api/v1', // CHANGE THIS TO YOUR RENDER URL
+            makesalot: 'https://makesalot-backend.onrender.com/api/v1', // CHANGE THIS TO YOUR RENDER URL
             yahoo: 'https://query1.finance.yahoo.com/v8/finance/chart'
         };
         this.currentPeriod = '3m';
