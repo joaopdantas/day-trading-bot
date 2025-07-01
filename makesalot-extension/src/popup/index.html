@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MakesALot Trading Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 400px;
+            min-height: 500px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .container {
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .form-group select option {
+            background: #764ba2;
+            color: white;
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .analyze-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .recommendation {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .recommendation-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .recommendation.buy .recommendation-text {
+            color: #22c55e;
+        }
+        
+        .recommendation.sell .recommendation-text {
+            color: #ef4444;
+        }
+        
+        .recommendation.hold .recommendation-text {
+            color: #f59e0b;
+        }
+        
+        .confidence {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .price-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .current-price {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .price-change {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .price-change.positive {
+            background: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        
+        .price-change.negative {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            height: 220px;
+        }
+        
+        .time-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .time-btn {
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        .time-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+        
+        .chart-wrapper {
+            height: 150px;
+            position: relative;
+        }
+        
+        .indicators {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .indicator {
+            text-align: center;
+            padding: 8px 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+        
+        .indicator-name {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+        
+        .indicator-value {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .indicator-signal {
+            font-size: 9px;
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .api-status {
+            font-size: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        
+        .api-status.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .api-status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📈 MakesALot</div>
+            <div class="subtitle">AI Trading Assistant</div>
+        </div>
+        
+        <div class="api-status" id="apiStatus">
+            Checking API connection...
+        </div>
+        
+        <div class="form-group">
+            <label for="apiType">API Provider</label>
+            <select id="apiType">
+                <option value="makesalot">MakesALot API</option>
+                <option value="yahoo">Yahoo Finance</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="symbol">Stock Symbol</label>
+            <input type="text" id="symbol" placeholder="Enter symbol (e.g., MSFT)" value="MSFT">
+        </div>
+        
+        <button class="analyze-btn" id="analyzeBtn">
+            📊 Analyze Stock
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>Analyzing...</span>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="results" id="results">
+            <div class="recommendation" id="recommendationCard">
+                <div class="recommendation-text" id="recommendationText">HOLD</div>
+                <div class="confidence" id="confidenceText">Confidence: 50%</div>
+            </div>
+            
+            <div class="price-info">
+                <div class="current-price" id="currentPrice">$0.00</div>
+                <div class="price-change" id="priceChange">+0.00%</div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="time-buttons">
+                    <button class="time-btn active" data-period="3m">3M</button>
+                    <button class="time-btn" data-period="6m">6M</button>
+                    <button class="time-btn" data-period="1y">12M</button>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="indicators">
+                <div class="indicator">
+                    <div class="indicator-name">RSI</div>
+                    <div class="indicator-value" id="rsiValue">--</div>
+                    <div class="indicator-signal" id="rsiSignal">--</div>
+                </div>
+                <div class="indicator">
+                    <div class="indicator-name">MACD</div>
+                    <div class="indicator-value" id="macdValue">--</div>
+                    <div class="indicator-signal" id="macdSignal">--</div>
+                </div>
+                <div class="indicator">
+                    <div class="indicator-name">BB</div>
+                    <div class="indicator-value" id="bbValue">--</div>
+                    <div class="indicator-signal" id="bbSignal">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../scripts/popup.js"></script>
+</body>
+</html>

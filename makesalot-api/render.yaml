@@ -4,13 +4,12 @@ services:
     env: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: HOST
         value: 0.0.0.0
       - key: PORT
-        value: 10000
-      - key: DEBUG
-        value: "false"
-      - key: CHROME_EXTENSION_URL
-        value: "chrome-extension://your-extension-id"
+        fromService:
+          type: web
+          name: makesalot-api
+          property: port
