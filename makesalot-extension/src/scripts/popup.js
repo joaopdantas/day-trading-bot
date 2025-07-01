@@ -1,8 +1,8 @@
-// MakesALot Trading Extension - Popup Logic
+// MakesALot Trading Extension - Popup Logic (FIXED)
 class TradingAssistant {
     constructor() {
         this.apiUrls = {
-            makesalot: 'https://makesalot-backend.onrender.com/api/v1', // CHANGE THIS TO YOUR RENDER URL
+            makesalot: 'https://makesalot-backend.onrender.com/api/v1',
             yahoo: 'https://query1.finance.yahoo.com/v8/finance/chart'
         };
         this.currentPeriod = '3m';
@@ -100,40 +100,41 @@ class TradingAssistant {
     }
 
     async analyzeMakesALot(symbol) {
-        // Get technical analysis
-        const analysisResponse = await fetch(`${this.apiUrls.makesalot}/technical/analyze`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                symbol: symbol,
-                timeframe: '1d',
-                indicators: ['RSI', 'MACD', 'BB']
-            })
-        });
+        try {
+            // Get technical analysis
+            const analysisResponse = await fetch(`${this.apiUrls.makesalot}/technical/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    timeframe: '1d',
+                    indicators: ['RSI', 'MACD', 'BB']
+                })
+            });
 
-        if (!analysisResponse.ok) {
-            throw new Error('Technical analysis failed');
+            const analysisData = analysisResponse.ok ? await analysisResponse.json() : null;
+
+            // Get predictions
+            const predictionResponse = await fetch(`${this.apiUrls.makesalot}/predictions/predict`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    timeframe: '1d'
+                })
+            });
+
+            const predictionData = predictionResponse.ok ? await predictionResponse.json() : null;
+
+            // Get chart data
+            const chartResponse = await fetch(`${this.apiUrls.makesalot}/chart/data/${symbol}?period=${this.currentPeriod}`);
+            const chartData = chartResponse.ok ? await chartResponse.json() : null;
+
+            this.displayResults(analysisData, predictionData, chartData);
+        } catch (error) {
+            console.error('MakesALot API error:', error);
+            throw error;
         }
-
-        const analysisData = await analysisResponse.json();
-
-        // Get predictions
-        const predictionResponse = await fetch(`${this.apiUrls.makesalot}/predictions/predict`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                symbol: symbol,
-                timeframe: '1d'
-            })
-        });
-
-        const predictionData = predictionResponse.ok ? await predictionResponse.json() : null;
-
-        // Get chart data
-        const chartResponse = await fetch(`${this.apiUrls.makesalot}/chart/data/${symbol}?period=${this.currentPeriod}`);
-        const chartData = chartResponse.ok ? await chartResponse.json() : null;
-
-        this.displayResults(analysisData, predictionData, chartData);
     }
 
     async analyzeYahoo(symbol) {
@@ -190,7 +191,7 @@ class TradingAssistant {
 
     displayResults(analysisData, predictionData, chartData) {
         // Display recommendation
-        if (predictionData) {
+        if (predictionData && predictionData.prediction) {
             const recommendation = predictionData.prediction.direction;
             const confidence = Math.round(predictionData.prediction.confidence * 100);
             
@@ -203,7 +204,7 @@ class TradingAssistant {
 
         // Display price info
         if (chartData) {
-            document.getElementById('currentPrice').textContent = `${chartData.current_price.toFixed(2)}`;
+            document.getElementById('currentPrice').textContent = `$${chartData.current_price.toFixed(2)}`;
             
             const changeEl = document.getElementById('priceChange');
             const changeText = `${chartData.price_change >= 0 ? '+' : ''}${chartData.price_change.toFixed(2)}%`;
@@ -282,7 +283,7 @@ class TradingAssistant {
                             color: 'rgba(255, 255, 255, 0.8)', 
                             font: { size: 9 },
                             callback: function(value) {
-                                return ' + value.toFixed(0);
+                                return '$' + value.toFixed(0);
                             }
                         }
                     }
