@@ -1,18 +1,5 @@
-# Build tools (necessário para Python 3.13)
-setuptools>=65.0.0
-wheel>=0.37.0
-
-# Core API dependencies
-fastapi==0.103.1
-uvicorn==0.23.2
-pydantic>=1.10.0,<2.0.0
-
-# Financial data
-yfinance==0.2.62
-
-# Data manipulation
-pandas==2.0.3
-numpy==1.23.5
-
-# Environment variables
-python-dotenv==1.0.0
+fastapi
+uvicorn
+yfinance
+pandas
+numpy
