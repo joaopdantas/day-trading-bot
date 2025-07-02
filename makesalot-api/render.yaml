@@ -4,12 +4,4 @@ services:
     env: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
-    envVars:
-      - key: HOST
-        value: 0.0.0.0
-      - key: PORT
-        fromService:
-          type: web
-          name: makesalot-api
-          property: port
+    startCommand: "python main.py"
