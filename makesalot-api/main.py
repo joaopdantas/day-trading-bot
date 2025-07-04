@@ -441,7 +441,7 @@ if __name__ == "__main__":
     )
     """
 MakesALot Trading API - Enhanced Version with Data Integration
-Integrates fetcher.py, preprocessor.py, and storage.py for professional-grade API
+Compatible with Python 3.13 - using alternative libraries for technical analysis
 """
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -454,15 +454,150 @@ from datetime import datetime, timedelta
 import asyncio
 import pandas as pd
 import numpy as np
-
-# Import our enhanced data modules (simulated - would be actual imports)
-# from src.data.fetcher import get_data_api, PolygonAPI, YahooFinanceAPI
-# from src.data.preprocessor import DataPreprocessor
-# from src.data.storage import MarketDataStorage
+import warnings
+warnings.filterwarnings('ignore')
 
 # Enhanced logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ===== TECHNICAL INDICATORS (Custom Implementation) =====
+class TechnicalIndicators:
+    """Custom technical indicators implementation - Python 3.13 compatible"""
+    
+    @staticmethod
+    def rsi(prices: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate RSI"""
+        delta = prices.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+    
+    @staticmethod
+    def macd(prices: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Dict[str, pd.Series]:
+        """Calculate MACD"""
+        ema_fast = prices.ewm(span=fast).mean()
+        ema_slow = prices.ewm(span=slow).mean()
+        macd_line = ema_fast - ema_slow
+        signal_line = macd_line.ewm(span=signal).mean()
+        histogram = macd_line - signal_line
+        
+        return {
+            'macd': macd_line,
+            'signal': signal_line,
+            'histogram': histogram
+        }
+    
+    @staticmethod
+    def bollinger_bands(prices: pd.Series, period: int = 20, std_dev: float = 2) -> Dict[str, pd.Series]:
+        """Calculate Bollinger Bands"""
+        sma = prices.rolling(window=period).mean()
+        std = prices.rolling(window=period).std()
+        
+        return {
+            'middle': sma,
+            'upper': sma + (std * std_dev),
+            'lower': sma - (std * std_dev),
+            'position': (prices - (sma - std * std_dev)) / (2 * std * std_dev)
+        }
+    
+    @staticmethod
+    def stochastic(high: pd.Series, low: pd.Series, close: pd.Series, k_period: int = 14, d_period: int = 3) -> Dict[str, pd.Series]:
+        """Calculate Stochastic Oscillator"""
+        lowest_low = low.rolling(window=k_period).min()
+        highest_high = high.rolling(window=k_period).max()
+        
+        k_percent = 100 * (close - lowest_low) / (highest_high - lowest_low)
+        d_percent = k_percent.rolling(window=d_period).mean()
+        
+        return {'k': k_percent, 'd': d_percent}
+    
+    @staticmethod
+    def williams_r(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate Williams %R"""
+        highest_high = high.rolling(window=period).max()
+        lowest_low = low.rolling(window=period).min()
+        
+        return -100 * (highest_high - close) / (highest_high - lowest_low)
+    
+    @staticmethod
+    def atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate Average True Range"""
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        return true_range.rolling(window=period).mean()
+    
+    @staticmethod
+    def add_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
+        """Add all technical indicators to dataframe"""
+        df = df.copy()
+        
+        # Moving averages
+        for period in [5, 10, 20, 50, 100, 200]:
+            if len(df) >= period:
+                df[f'SMA_{period}'] = df['close'].rolling(window=period).mean()
+                df[f'EMA_{period}'] = df['close'].ewm(span=period).mean()
+        
+        # RSI
+        df['RSI'] = TechnicalIndicators.rsi(df['close'])
+        
+        # MACD
+        macd_data = TechnicalIndicators.macd(df['close'])
+        df['MACD'] = macd_data['macd']
+        df['MACD_signal'] = macd_data['signal']
+        df['MACD_histogram'] = macd_data['histogram']
+        
+        # Bollinger Bands
+        bb_data = TechnicalIndicators.bollinger_bands(df['close'])
+        df['BB_upper'] = bb_data['upper']
+        df['BB_middle'] = bb_data['middle']
+        df['BB_lower'] = bb_data['lower']
+        df['BB_position'] = bb_data['position']
+        df['BB_width'] = (bb_data['upper'] - bb_data['lower']) / bb_data['middle']
+        
+        # Stochastic
+        if all(col in df.columns for col in ['high', 'low', 'close']):
+            stoch_data = TechnicalIndicators.stochastic(df['high'], df['low'], df['close'])
+            df['Stoch_K'] = stoch_data['k']
+            df['Stoch_D'] = stoch_data['d']
+        
+        # Williams %R
+        if all(col in df.columns for col in ['high', 'low', 'close']):
+            df['Williams_R'] = TechnicalIndicators.williams_r(df['high'], df['low'], df['close'])
+        
+        # ATR
+        if all(col in df.columns for col in ['high', 'low', 'close']):
+            df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+        
+        # Volume indicators
+        if 'volume' in df.columns:
+            df['volume_sma_20'] = df['volume'].rolling(20).mean()
+            df['volume_ratio'] = df['volume'] / df['volume_sma_20']
+            
+            # On-Balance Volume
+            price_change = df['close'].diff()
+            obv = []
+            obv_val = 0
+            
+            for i, change in enumerate(price_change):
+                if pd.isna(change):
+                    obv.append(0)
+                elif change > 0:
+                    obv_val += df['volume'].iloc[i]
+                    obv.append(obv_val)
+                elif change < 0:
+                    obv_val -= df['volume'].iloc[i]
+                    obv.append(obv_val)
+                else:
+                    obv.append(obv_val)
+            
+            df['OBV'] = obv
+        
+        return df
 
 # ===== ENHANCED DATA MODELS =====
 class AnalysisRequest(BaseModel):
