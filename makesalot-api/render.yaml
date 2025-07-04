@@ -3,7 +3,7 @@ services:
     name: makesalot-api
     env: python
     plan: free
-    pythonVersion: "3.11"  # Changed from 3.13 to 3.11 for better compatibility
+    # Let Render use its default Python 3.13 since that's what it's using
     buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "python main.py"
     envVars:
