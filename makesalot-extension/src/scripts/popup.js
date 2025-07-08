@@ -16,7 +16,6 @@ class TradingAssistant {
     init() {
         this.bindEvents();
         this.checkApiConnection();
-        this.loadDetectedSymbol(); // Load detected symbol on startup
     }
 
     bindEvents() {
@@ -53,102 +52,6 @@ class TradingAssistant {
                 this.currentPeriod = e.target.dataset.period;
                 this.updateChart();
             });
-        });
-    }
-
-    async loadDetectedSymbol() {
-        try {
-            // Get detected symbol from storage
-            const result = await chrome.storage.local.get([
-                'detected_symbol', 
-                'detected_source', 
-                'detected_url',
-                'detected_at'
-            ]);
-
-            if (result.detected_symbol) {
-                const detectedAt = result.detected_at || 0;
-                const now = Date.now();
-                const fiveMinutes = 5 * 60 * 1000;
-
-                // Only use if detected within last 5 minutes
-                if (now - detectedAt < fiveMinutes) {
-                    console.log(`Using detected symbol: ${result.detected_symbol} from ${result.detected_source}`);
-                    
-                    // Set the symbol in input
-                    document.getElementById('symbol').value = result.detected_symbol;
-                    this.currentSymbol = result.detected_symbol;
-                    
-                    // Set appropriate API based on source
-                    this.setApiBasedOnSource(result.detected_source);
-                    
-                    // Update status
-                    this.showDetectedSymbolStatus(result.detected_symbol, result.detected_source);
-                }
-            }
-
-            // Also listen for new symbol detection messages
-            this.listenForSymbolUpdates();
-        } catch (error) {
-            console.error('Error loading detected symbol:', error);
-        }
-    }
-
-    setApiBasedOnSource(source) {
-        const apiSelect = document.getElementById('apiType');
-        
-        // Map source to preferred API
-        const apiMapping = {
-            'yahoo': 'yahoo',
-            'tradingview': 'makesalot', // TradingView works well with our API
-            'investing': 'yahoo',
-            'marketwatch': 'yahoo'
-        };
-
-        const preferredApi = apiMapping[source] || 'makesalot';
-        
-        if (apiSelect.querySelector(`option[value="${preferredApi}"]`)) {
-            apiSelect.value = preferredApi;
-            this.checkApiConnection();
-        }
-    }
-
-    showDetectedSymbolStatus(symbol, source) {
-        const status = document.getElementById('apiStatus');
-        const originalText = status.textContent;
-        
-        status.textContent = `✨ Auto-detected ${symbol} from ${source}`;
-        status.className = 'api-status connected';
-        
-        // Revert to original status after 3 seconds
-        setTimeout(() => {
-            status.textContent = originalText;
-        }, 3000);
-    }
-
-    listenForSymbolUpdates() {
-        // Listen for storage changes (when new symbol is detected)
-        chrome.storage.onChanged.addListener((changes, areaName) => {
-            if (areaName === 'local' && changes.detected_symbol) {
-                const newSymbol = changes.detected_symbol.newValue;
-                const newSource = changes.detected_source?.newValue;
-                
-                if (newSymbol && newSymbol !== this.currentSymbol) {
-                    console.log(`New symbol detected: ${newSymbol}`);
-                    
-                    // Update input
-                    document.getElementById('symbol').value = newSymbol;
-                    this.currentSymbol = newSymbol;
-                    
-                    // Set appropriate API
-                    if (newSource) {
-                        this.setApiBasedOnSource(newSource);
-                    }
-                    
-                    // Show notification
-                    this.showDetectedSymbolStatus(newSymbol, newSource || 'website');
-                }
-            }
         });
     }
 
