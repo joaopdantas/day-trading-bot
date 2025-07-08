@@ -1,16 +1,31 @@
-numpy>=1.23.5 
-pandas>=2.0.3
+# Core dependencies - Python 3.11.1 compatible (SEM TensorFlow)
+numpy>=1.24.0,<1.26.0
+pandas>=2.0.0,<2.2.0
+
+# Technical analysis
 pandas-ta>=0.3.14b0
+
+# Machine Learning (SEM TensorFlow - funciona perfeitamente)
 scikit-learn>=1.3.0
-tensorflow>=2.13.0
-scipy>=1.7.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-matplotlib>=3.7.2
-joblib>=1.3.2
-numba>=0.56.0
-pytest>=7.4.0
-jupyter>=1.0.0
+scipy>=1.11.0
+
+# API Framework
 fastapi==0.103.1
 uvicorn==0.23.2
-yfinance==0.2.62
+
+# Data fetching
+requests>=2.31.0
+python-dotenv>=1.0.0
+yfinance>=0.2.28
+
+# Plotting/Visualization
+matplotlib>=3.7.0
+
+# Utilities
+joblib>=1.3.0
+
+# Performance
+numba>=0.57.0
+
+# Development/Testing
+pytest>=7.4.0
