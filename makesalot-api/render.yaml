@@ -3,13 +3,11 @@ services:
     name: makesalot-api
     env: python
     plan: free
-    # Let Render use its default Python 3.13 since that's what it's using
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    pythonVersion: "3.11"
+    buildCommand: "pip install --upgrade pip && pip install fastapi uvicorn yfinance pandas numpy"
     startCommand: "python main.py"
     envVars:
       - key: PORT
         value: 10000
       - key: HOST
         value: 0.0.0.0
-      - key: DEBUG
-        value: false
