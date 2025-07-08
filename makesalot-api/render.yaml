@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     pythonVersion: "3.11"
-    buildCommand: "pip install --upgrade pip && pip install fastapi uvicorn yfinance pandas numpy"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "python main.py"
     envVars:
       - key: PORT
