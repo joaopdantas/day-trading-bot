@@ -3,8 +3,13 @@ services:
     name: makesalot-api
     env: python
     plan: free
-    buildCommand: "python -m pip install --upgrade pip setuptools wheel && pip install -r requirements.txt"
-    startCommand: "python main.py"
+    # Build command otimizado para o Render
+    buildCommand: |
+      python -m pip install --upgrade pip setuptools wheel
+      pip install --no-cache-dir -r requirements.txt
+    # Start command corrigido
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    # Variáveis de ambiente
     envVars:
       - key: PORT
         value: 10000
@@ -12,3 +17,13 @@ services:
         value: 0.0.0.0
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: DEBUG
+        value: "false"
+      - key: WORKERS
+        value: "1"
+    # Configurações adicionais para produção
+    healthCheckPath: "/health"
+    disk:
+      name: makesalot-data
+      mountPath: /tmp
+      sizeGB: 1
