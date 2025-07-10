@@ -3,6 +3,8 @@ services:
     name: makesalot-api
     env: python
     plan: free
+    # Especificar versão do Python
+    runtime: python-3.11.9
     # Build command otimizado para o Render
     buildCommand: |
       python -m pip install --upgrade pip setuptools wheel
