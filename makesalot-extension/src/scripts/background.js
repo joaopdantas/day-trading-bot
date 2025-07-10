@@ -1,23 +1,34 @@
-// background.js - Optimized Service Worker for MakesALot Extension
+// background.js - Complete Service Worker for MakesALot Extension v2.1
 
-console.log('🚀 MakesALot Background Script v2.0 Loading...');
+console.log('🚀 MakesALot Background Script v2.1 Loading...');
 
-// Configuration
+// ===== CONFIGURATION =====
 const CONFIG = {
     API_BASE_URL: 'https://makesalot-backend.onrender.com',
     API_TIMEOUT: 15000,
     CACHE_DURATION: 300000, // 5 minutes
     MAX_CACHE_SIZE: 50,
     RETRY_ATTEMPTS: 2,
-    RETRY_DELAY: 2000
+    RETRY_DELAY: 2000,
+    CLEANUP_INTERVAL: 1800000, // 30 minutes
+    HEALTH_CHECK_INTERVAL: 300000, // 5 minutes
+    SESSION_TIMEOUT: 3600000 // 1 hour
 };
 
-// Global state
+// ===== GLOBAL STATE =====
 const state = {
     apiCache: new Map(),
     symbolData: new Map(),
     lastApiCheck: 0,
-    apiStatus: 'unknown'
+    apiStatus: 'unknown',
+    sessionStart: Date.now(),
+    analytics: {
+        symbolDetections: 0,
+        apiRequests: 0,
+        successfulAnalyses: 0,
+        errors: 0,
+        cacheHits: 0
+    }
 };
 
 // ===== INSTALLATION & STARTUP =====
@@ -25,8 +36,151 @@ chrome.runtime.onInstalled.addListener((details) => {
     console.log('📦 MakesALot Extension installed:', details.reason);
     
     try {
-        // Set initial badge
+        // Set initial badge configuration
         chrome.action.setBadgeBackgroundColor({ color: '#667eea' });
+        chrome.action.setBadgeText({ text: '' });
+        chrome.action.setTitle({ title: 'MakesALot Trading Assistant' });
+        
+        // Initialize context menus
+        createContextMenus();
+        
+        // Setup alarms for periodic tasks
+        setupPeriodicTasks();
+        
+        // Initial cleanup
+        setTimeout(cleanupOldData, 5000);
+        
+        console.log('✅ Extension initialized successfully');
+    } catch (error) {
+        console.error('❌ Initialization error:', error);
+        trackEvent('error', { context: 'initialization', error: error.message });
+    }
+});
+
+// ===== MESSAGE HANDLING =====
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('📨 Background received message:', message.type, 'from tab:', sender.tab?.id);
+    
+    try {
+        switch (message.type) {
+            case 'SYMBOL_DETECTED':
+                handleSymbolDetection(message, sender.tab);
+                sendResponse({ success: true });
+                break;
+                
+            case 'GET_SYMBOL':
+                getDetectedSymbol(sender.tab?.id, sendResponse);
+                return true; // Keep channel open for async response
+                
+            case 'CLEAR_SYMBOL':
+                clearSymbolForTab(sender.tab?.id);
+                sendResponse({ success: true });
+                break;
+                
+            case 'TEST_API':
+                testAPIConnection(sendResponse);
+                return true; // Keep channel open
+                
+            case 'FETCH_ANALYSIS':
+                fetchAnalysisFromAPI(message.symbol, message.options || {}, sendResponse);
+                return true; // Keep channel open
+                
+            case 'FETCH_QUOTE':
+                fetchQuoteFromAPI(message.symbol, sendResponse);
+                return true; // Keep channel open
+                
+            case 'VALIDATE_SYMBOL':
+                validateSymbolWithAPI(message.symbol, sendResponse);
+                return true; // Keep channel open
+                
+            case 'GET_ANALYTICS':
+                sendResponse(getAnalytics());
+                break;
+                
+            case 'CLEAR_CACHE':
+                state.apiCache.clear();
+                sendResponse({ success: true, message: 'Cache cleared' });
+                break;
+                
+            default:
+                console.log('❓ Unknown message type:', message.type);
+                sendResponse({ error: 'Unknown message type', type: message.type });
+        }
+    } catch (error) {
+        console.error('❌ Error handling message:', error);
+        trackEvent('error', { context: 'message_handling', error: error.message });
+        sendResponse({ error: error.message });
+    }
+});
+
+// ===== SYMBOL DETECTION HANDLING =====
+function handleSymbolDetection(message, tab) {
+    if (!tab || !tab.id) {
+        console.error('❌ Invalid tab information');
+        return;
+    }
+
+    const { symbol, source, url, hostname, confidence } = message;
+    
+    console.log(`📊 Symbol detected: ${symbol} from ${source} on ${hostname} (confidence: ${confidence || 'unknown'})`);
+    
+    try {
+        // Track analytics
+        trackEvent('symbol_detected', { symbol, source, confidence });
+        
+        // Create symbol info object
+        const symbolInfo = {
+            symbol,
+            source,
+            url,
+            hostname,
+            confidence: confidence || 0.8,
+            detected_at: Date.now(),
+            tab_id: tab.id
+        };
+        
+        // Store in memory
+        state.symbolData.set(tab.id, symbolInfo);
+        
+        // Store in chrome storage
+        const storageData = {
+            [`symbol_${tab.id}`]: symbol,
+            [`source_${tab.id}`]: source,
+            [`url_${tab.id}`]: url,
+            [`detected_at_${tab.id}`]: Date.now(),
+            [`confidence_${tab.id}`]: confidence || 0.8,
+            // Global storage for popup access
+            'detected_symbol': symbol,
+            'detected_source': source,
+            'detected_url': url,
+            'detected_at': Date.now(),
+            'detected_confidence': confidence || 0.8
+        };
+        
+        chrome.storage.local.set(storageData).then(() => {
+            console.log('💾 Symbol stored successfully');
+            updateBadgeForSymbol(symbol, source, tab.id);
+            
+            // Preload analysis for high confidence detections
+            if (confidence && confidence > 0.9) {
+                preloadAnalysis(symbol);
+            }
+        }).catch(error => {
+            console.error('❌ Storage error:', error);
+            trackEvent('error', { context: 'storage', error: error.message });
+        });
+        
+    } catch (error) {
+        console.error('❌ Error storing symbol:', error);
+        trackEvent('error', { context: 'symbol_detection', error: error.message });
+    }
+}
+
+function updateBadgeForSymbol(symbol, source, tabId) {
+    try {
+        // Truncate symbol for badge (max 4 characters)
+        const badgeText = symbol && symbol.length > 4 ? symbol.substring(0, 4) : symbol || '';
+        
         chrome.action.setBadgeText({
             text: badgeText,
             tabId: tabId
@@ -62,6 +216,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         
     } catch (error) {
         console.error('❌ Error updating badge:', error);
+        trackEvent('error', { context: 'badge_update', error: error.message });
     }
 }
 
@@ -75,6 +230,8 @@ async function makeAPIRequest(endpoint, options = {}) {
         const cached = state.apiCache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp) < CONFIG.CACHE_DURATION) {
             console.log('📋 Using cached API response for', endpoint);
+            trackEvent('cache_hit', { endpoint });
+            state.analytics.cacheHits++;
             return cached.data;
         }
     }
@@ -84,7 +241,7 @@ async function makeAPIRequest(endpoint, options = {}) {
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'User-Agent': 'MakesALot-Extension/2.0',
+            'User-Agent': 'MakesALot-Extension/2.1',
             ...options.headers
         },
         signal: AbortSignal.timeout(CONFIG.API_TIMEOUT)
@@ -96,10 +253,12 @@ async function makeAPIRequest(endpoint, options = {}) {
 
     let lastError;
     
-    // Retry logic
+    // Retry logic with exponential backoff
     for (let attempt = 1; attempt <= CONFIG.RETRY_ATTEMPTS; attempt++) {
         try {
             console.log(`🌐 API Request (attempt ${attempt}): ${endpoint}`);
+            trackEvent('api_request', { endpoint, attempt });
+            state.analytics.apiRequests++;
             
             const response = await fetch(url, requestOptions);
             
@@ -129,18 +288,23 @@ async function makeAPIRequest(endpoint, options = {}) {
         } catch (error) {
             lastError = error;
             console.warn(`⚠️ API Request failed (attempt ${attempt}): ${error.message}`);
+            trackEvent('api_error', { endpoint, attempt, error: error.message });
             
             if (attempt < CONFIG.RETRY_ATTEMPTS) {
-                await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempt));
+                const delay = CONFIG.RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
     }
     
+    state.analytics.errors++;
     throw lastError;
 }
 
 async function testAPIConnection(sendResponse) {
     try {
+        console.log('🔍 Testing API connection...');
+        
         // Test basic health endpoint
         const healthData = await makeAPIRequest('/health', { useCache: false });
         
@@ -156,8 +320,10 @@ async function testAPIConnection(sendResponse) {
             }
         });
         
+        console.log('✅ API connection test passed');
+        
     } catch (error) {
-        // Try fallback endpoint
+        // Try fallback endpoints
         try {
             await makeAPIRequest('/api/v1/stats', { useCache: false });
             
@@ -166,6 +332,8 @@ async function testAPIConnection(sendResponse) {
                 connected: true,
                 info: { message: 'Limited API access available' }
             });
+            
+            console.log('⚠️ API connection limited but working');
             
         } catch (fallbackError) {
             state.apiStatus = 'disconnected';
@@ -196,11 +364,14 @@ async function fetchAnalysisFromAPI(symbol, options = {}, sendResponse) {
                 }
             });
 
+            state.analytics.successfulAnalyses++;
             sendResponse({
                 success: true,
                 data: analysisData,
                 source: 'advanced_api'
             });
+            
+            console.log(`✅ Advanced analysis successful for ${symbol}`);
             
         } catch (advancedError) {
             console.log('🔄 Advanced API failed, trying simple analysis...');
@@ -210,15 +381,20 @@ async function fetchAnalysisFromAPI(symbol, options = {}, sendResponse) {
                 `/api/v1/simple-analyze?symbol=${symbol}&days=${options.days || 100}`
             );
 
+            state.analytics.successfulAnalyses++;
             sendResponse({
                 success: true,
                 data: simpleData,
                 source: 'simple_api'
             });
+            
+            console.log(`✅ Simple analysis successful for ${symbol}`);
         }
         
     } catch (error) {
         console.error(`❌ Analysis failed for ${symbol}:`, error);
+        trackEvent('error', { context: 'fetch_analysis', symbol, error: error.message });
+        
         sendResponse({
             success: false,
             error: error.message,
@@ -241,6 +417,8 @@ async function fetchQuoteFromAPI(symbol, sendResponse) {
                 source: 'enhanced_quote'
             });
             
+            console.log(`✅ Enhanced quote successful for ${symbol}`);
+            
         } catch (enhancedError) {
             // Fallback to quick quote
             const quickData = await makeAPIRequest(`/api/v1/quick-quote/${symbol}`);
@@ -250,10 +428,14 @@ async function fetchQuoteFromAPI(symbol, sendResponse) {
                 data: quickData,
                 source: 'quick_quote'
             });
+            
+            console.log(`✅ Quick quote successful for ${symbol}`);
         }
         
     } catch (error) {
         console.error(`❌ Quote failed for ${symbol}:`, error);
+        trackEvent('error', { context: 'fetch_quote', symbol, error: error.message });
+        
         sendResponse({
             success: false,
             error: error.message
@@ -272,6 +454,8 @@ async function validateSymbolWithAPI(symbol, sendResponse) {
             data: validationData
         });
         
+        console.log(`✅ Symbol validation successful for ${symbol}`);
+        
     } catch (error) {
         console.error(`❌ Validation failed for ${symbol}:`, error);
         
@@ -288,7 +472,11 @@ async function validateSymbolWithAPI(symbol, sendResponse) {
                 }
             });
             
+            console.log(`✅ Fallback validation successful for ${symbol}`);
+            
         } catch (fallbackError) {
+            trackEvent('error', { context: 'validate_symbol', symbol, error: error.message });
+            
             sendResponse({
                 success: false,
                 error: error.message
@@ -313,9 +501,9 @@ async function preloadAnalysis(symbol) {
 // ===== SYMBOL DATA MANAGEMENT =====
 function getDetectedSymbol(tabId, sendResponse) {
     try {
-        // Try memory first
+        // Try memory first for fast access
         const memoryData = state.symbolData.get(tabId);
-        if (memoryData && (Date.now() - memoryData.detected_at) < 3600000) { // 1 hour
+        if (memoryData && (Date.now() - memoryData.detected_at) < CONFIG.SESSION_TIMEOUT) {
             sendResponse({
                 symbol: memoryData.symbol,
                 source: memoryData.source,
@@ -325,7 +513,7 @@ function getDetectedSymbol(tabId, sendResponse) {
             return;
         }
 
-        // Fallback to storage
+        // Fallback to chrome storage
         const keys = [
             `symbol_${tabId}`,
             `source_${tabId}`,
@@ -361,12 +549,15 @@ function getDetectedSymbol(tabId, sendResponse) {
         
     } catch (error) {
         console.error('❌ Error getting symbol data:', error);
+        trackEvent('error', { context: 'get_symbol', error: error.message });
         sendResponse({ error: error.message });
     }
 }
 
 function clearSymbolForTab(tabId) {
     if (!tabId) return;
+    
+    console.log(`🧹 Clearing symbol data for tab ${tabId}`);
     
     // Clear from memory
     state.symbolData.delete(tabId);
@@ -384,7 +575,7 @@ function clearSymbolForTab(tabId) {
         if (chrome.runtime.lastError) {
             console.error('❌ Error clearing storage:', chrome.runtime.lastError);
         } else {
-            console.log(`🧹 Cleared data for tab ${tabId}`);
+            console.log(`✅ Cleared data for tab ${tabId}`);
         }
     });
     
@@ -424,11 +615,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
                 
                 // Keep data for a short while in case user returns
                 setTimeout(() => {
-                    if (state.symbolData.has(tabId)) {
-                        const data = state.symbolData.get(tabId);
-                        if (Date.now() - data.detected_at > 600000) { // 10 minutes
-                            clearSymbolForTab(tabId);
-                        }
+                    const data = state.symbolData.get(tabId);
+                    if (data && Date.now() - data.detected_at > 600000) { // 10 minutes
+                        clearSymbolForTab(tabId);
                     }
                 }, 600000);
             }
@@ -440,6 +629,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // ===== PERIODIC CLEANUP =====
 function cleanupOldData() {
+    console.log('🧹 Starting cleanup...');
+    
     // Clean API cache
     const now = Date.now();
     let cacheCleared = 0;
@@ -451,24 +642,16 @@ function cleanupOldData() {
         }
     }
     
-    if (cacheCleared > 0) {
-        console.log(`🧹 Cleared ${cacheCleared} expired cache entries`);
-    }
-    
     // Clean memory symbol data
     let symbolsCleared = 0;
     for (const [tabId, data] of state.symbolData.entries()) {
-        if (now - data.detected_at > 3600000) { // 1 hour
+        if (now - data.detected_at > CONFIG.SESSION_TIMEOUT) {
             state.symbolData.delete(tabId);
             symbolsCleared++;
         }
     }
     
-    if (symbolsCleared > 0) {
-        console.log(`🧹 Cleared ${symbolsCleared} old symbol detections from memory`);
-    }
-    
-    // Clean storage
+    // Clean chrome storage
     chrome.storage.local.get(null, (items) => {
         if (chrome.runtime.lastError) {
             console.error('❌ Cleanup storage error:', chrome.runtime.lastError);
@@ -496,84 +679,128 @@ function cleanupOldData() {
                 if (chrome.runtime.lastError) {
                     console.error('❌ Cleanup removal error:', chrome.runtime.lastError);
                 } else {
-                    console.log(`🧹 Cleaned up ${keysToRemove.length} old storage entries`);
+                    console.log(`🗑️ Cleaned up ${keysToRemove.length} old storage entries`);
                 }
             });
         }
     });
+    
+    console.log(`🧹 Cleanup completed: ${cacheCleared} cache entries, ${symbolsCleared} symbols cleared`);
 }
 
-// ===== ERROR HANDLING =====
-self.addEventListener('error', (event) => {
-    console.error('❌ Background script error:', event.error);
+// ===== ANALYTICS AND MONITORING =====
+function trackEvent(event, data = {}) {
+    switch (event) {
+        case 'symbol_detected':
+            state.analytics.symbolDetections++;
+            break;
+        case 'api_request':
+            state.analytics.apiRequests++;
+            break;
+        case 'successful_analysis':
+            state.analytics.successfulAnalyses++;
+            break;
+        case 'cache_hit':
+            state.analytics.cacheHits++;
+            break;
+        case 'error':
+        case 'api_error':
+            state.analytics.errors++;
+            break;
+    }
+    
+    console.log(`📊 Event tracked: ${event}`, data);
+}
+
+function getAnalytics() {
+    const sessionDuration = Date.now() - state.sessionStart;
+    
+    return {
+        ...state.analytics,
+        sessionDuration: Math.round(sessionDuration / 1000),
+        sessionStart: state.sessionStart,
+        apiStatus: state.apiStatus,
+        cacheSize: state.apiCache.size,
+        activeSymbols: state.symbolData.size,
+        averageRequestsPerMinute: state.analytics.apiRequests > 0 ? 
+            Math.round((state.analytics.apiRequests / sessionDuration) * 60000) : 0,
+        successRate: state.analytics.apiRequests > 0 ? 
+            Math.round((state.analytics.successfulAnalyses / state.analytics.apiRequests) * 100) : 0,
+        cacheHitRate: state.analytics.apiRequests > 0 ?
+            Math.round((state.analytics.cacheHits / state.analytics.apiRequests) * 100) : 0
+    };
+}
+
+// ===== ALARMS AND PERIODIC TASKS =====
+function setupPeriodicTasks() {
+    // Clear existing alarms
+    chrome.alarms.clearAll();
+    
+    // Setup new alarms
+    chrome.alarms.create('cleanup', { periodInMinutes: 30 });
+    chrome.alarms.create('api-health-check', { periodInMinutes: 5 });
+    chrome.alarms.create('cache-optimization', { periodInMinutes: 10 });
+    
+    console.log('⏰ Periodic tasks scheduled');
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    console.log(`⏰ Alarm triggered: ${alarm.name}`);
+    
+    switch (alarm.name) {
+        case 'cleanup':
+            cleanupOldData();
+            break;
+            
+        case 'api-health-check':
+            performApiHealthCheck();
+            break;
+            
+        case 'cache-optimization':
+            optimizeCache();
+            break;
+    }
 });
 
-self.addEventListener('unhandledrejection', (event) => {
-    console.error('❌ Unhandled promise rejection:', event.reason);
-});
-
-// ===== PERIODIC TASKS =====
-// Run cleanup every 30 minutes
-setInterval(cleanupOldData, 30 * 60 * 1000);
-
-// Check API status every 5 minutes
-setInterval(async () => {
-    if (Date.now() - state.lastApiCheck > 300000) { // 5 minutes
-        try {
+async function performApiHealthCheck() {
+    try {
+        if (Date.now() - state.lastApiCheck > CONFIG.HEALTH_CHECK_INTERVAL) {
             await makeAPIRequest('/health', { useCache: false });
             state.apiStatus = 'connected';
             state.lastApiCheck = Date.now();
-        } catch (error) {
-            state.apiStatus = 'disconnected';
-            console.log('⚠️ Periodic API check failed');
+            console.log('💚 API health check passed');
         }
+    } catch (error) {
+        state.apiStatus = 'disconnected';
+        console.log('💔 API health check failed:', error.message);
     }
-}, 300000);
-
-// ===== CONTEXT MENU (Optional) =====
-try {
-    chrome.contextMenus.create({
-        id: 'analyze-symbol',
-        title: 'Analyze with MakesALot',
-        contexts: ['selection'],
-        documentUrlPatterns: [
-            'https://finance.yahoo.com/*',
-            'https://tradingview.com/*',
-            'https://www.investing.com/*',
-            'https://www.marketwatch.com/*',
-            'https://www.bloomberg.com/*',
-            'https://www.cnbc.com/*'
-        ]
-    });
-
-    chrome.contextMenus.onClicked.addListener((info, tab) => {
-        if (info.menuItemId === 'analyze-symbol' && info.selectionText) {
-            const symbol = info.selectionText.trim().toUpperCase();
-            
-            // Validate basic symbol format
-            if (/^[A-Z0-9.-]{1,10}$/.test(symbol)) {
-                // Send to content script to trigger analysis
-                chrome.tabs.sendMessage(tab.id, {
-                    type: 'ANALYZE_SYMBOL',
-                    symbol: symbol
-                });
-                
-                console.log(`📊 Context menu analysis triggered for: ${symbol}`);
-            }
-        }
-    });
-} catch (error) {
-    console.log('⚠️ Context menu creation failed (may not be supported):', error.message);
 }
 
-// ===== STARTUP COMPLETE =====
-console.log('✅ MakesALot Background Script Loaded Successfully');
-console.log(`🔧 API Base URL: ${CONFIG.API_BASE_URL}`);
-console.log(`⚡ Cache Duration: ${CONFIG.CACHE_DURATION / 1000}s`);
-console.log(`🔄 Retry Attempts: ${CONFIG.RETRY_ATTEMPTS}`);
-
-// Initial cleanup
-setTimeout(cleanupOldData, 5000);
+function optimizeCache() {
+    const before = state.apiCache.size;
+    
+    // Remove expired entries
+    const now = Date.now();
+    for (const [key, value] of state.apiCache.entries()) {
+        if (now - value.timestamp > CONFIG.CACHE_DURATION) {
+            state.apiCache.delete(key);
+        }
+    }
+    
+    // If cache is still too large, remove oldest entries
+    if (state.apiCache.size > CONFIG.MAX_CACHE_SIZE) {
+        const entries = Array.from(state.apiCache.entries());
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        
+        const toRemove = entries.slice(0, state.apiCache.size - CONFIG.MAX_CACHE_SIZE);
+        toRemove.forEach(([key]) => state.apiCache.delete(key));
+    }
+    
+    const after = state.apiCache.size;
+    if (before !== after) {
+        console.log(`🗑️ Cache optimized: ${before} → ${after} entries`);
+    }
+}
 
 // ===== KEYBOARD SHORTCUTS =====
 chrome.commands.onCommand.addListener((command) => {
@@ -627,182 +854,85 @@ async function handleTogglePopup() {
     }
 }
 
-// ===== ALARMS FOR PERIODIC TASKS =====
-chrome.alarms.onAlarm.addListener((alarm) => {
-    console.log(`⏰ Alarm triggered: ${alarm.name}`);
-    
-    switch (alarm.name) {
-        case 'cleanup':
-            cleanupOldData();
-            break;
-            
-        case 'api-health-check':
-            performApiHealthCheck();
-            break;
-            
-        case 'cache-optimization':
-            optimizeCache();
-            break;
-    }
-});
-
-// Create alarms on startup
-chrome.alarms.create('cleanup', { periodInMinutes: 30 });
-chrome.alarms.create('api-health-check', { periodInMinutes: 5 });
-chrome.alarms.create('cache-optimization', { periodInMinutes: 10 });
-
-async function performApiHealthCheck() {
+// ===== CONTEXT MENUS =====
+function createContextMenus() {
     try {
-        if (Date.now() - state.lastApiCheck > 300000) { // 5 minutes
-            await makeAPIRequest('/health', { useCache: false });
-            state.apiStatus = 'connected';
-            state.lastApiCheck = Date.now();
-            console.log('💚 API health check passed');
-        }
-    } catch (error) {
-        state.apiStatus = 'disconnected';
-        console.log('💔 API health check failed:', error.message);
-    }
-}
+        chrome.contextMenus.removeAll(() => {
+            chrome.contextMenus.create({
+                id: 'analyze-symbol',
+                title: 'Analyze with MakesALot',
+                contexts: ['selection'],
+                documentUrlPatterns: [
+                    'https://finance.yahoo.com/*',
+                    'https://tradingview.com/*',
+                    'https://www.investing.com/*',
+                    'https://www.marketwatch.com/*',
+                    'https://www.bloomberg.com/*',
+                    'https://www.cnbc.com/*'
+                ]
+            });
 
-function optimizeCache() {
-    const before = state.apiCache.size;
-    
-    // Remove expired entries
-    const now = Date.now();
-    for (const [key, value] of state.apiCache.entries()) {
-        if (now - value.timestamp > CONFIG.CACHE_DURATION) {
-            state.apiCache.delete(key);
-        }
-    }
-    
-    // If cache is still too large, remove oldest entries
-    if (state.apiCache.size > CONFIG.MAX_CACHE_SIZE) {
-        const entries = Array.from(state.apiCache.entries());
-        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-        
-        const toRemove = entries.slice(0, state.apiCache.size - CONFIG.MAX_CACHE_SIZE);
-        toRemove.forEach(([key]) => state.apiCache.delete(key));
-    }
-    
-    const after = state.apiCache.size;
-    if (before !== after) {
-        console.log(`🗑️ Cache optimized: ${before} → ${after} entries`);
-    }
-}
+            chrome.contextMenus.create({
+                id: 'separator-1',
+                type: 'separator',
+                contexts: ['selection']
+            });
 
-// ===== NOTIFICATION SYSTEM =====
-async function showNotification(title, message, type = 'basic') {
-    try {
-        await chrome.notifications.create({
-            type: type,
-            iconUrl: 'icons/icon48.png',
-            title: title,
-            message: message
+            chrome.contextMenus.create({
+                id: 'detect-symbol',
+                title: 'Force Symbol Detection',
+                contexts: ['page'],
+                documentUrlPatterns: [
+                    'https://finance.yahoo.com/*',
+                    'https://tradingview.com/*',
+                    'https://www.investing.com/*',
+                    'https://www.marketwatch.com/*',
+                    'https://www.bloomberg.com/*',
+                    'https://www.cnbc.com/*'
+                ]
+            });
         });
+
+        console.log('📋 Context menus created');
     } catch (error) {
-        console.log('⚠️ Notifications not available:', error.message);
+        console.log('⚠️ Context menu creation failed:', error.message);
     }
 }
 
-// ===== ANALYTICS AND MONITORING =====
-const analytics = {
-    symbolDetections: 0,
-    apiRequests: 0,
-    successfulAnalyses: 0,
-    errors: 0,
-    sessionStart: Date.now()
-};
-
-function trackEvent(event, data = {}) {
-    switch (event) {
-        case 'symbol_detected':
-            analytics.symbolDetections++;
-            break;
-        case 'api_request':
-            analytics.apiRequests++;
-            break;
-        case 'successful_analysis':
-            analytics.successfulAnalyses++;
-            break;
-        case 'error':
-            analytics.errors++;
-            break;
-    }
-    
-    console.log(`📊 Event tracked: ${event}`, data);
-}
-
-function getAnalytics() {
-    const sessionDuration = Date.now() - analytics.sessionStart;
-    
-    return {
-        ...analytics,
-        sessionDuration: Math.round(sessionDuration / 1000),
-        averageRequestsPerMinute: Math.round((analytics.apiRequests / sessionDuration) * 60000),
-        successRate: analytics.apiRequests > 0 ? 
-            Math.round((analytics.successfulAnalyses / analytics.apiRequests) * 100) : 0
-    };
-}
-
-// ===== ENHANCED MESSAGE HANDLERS =====
-// Add analytics tracking to existing handlers
-const originalHandleSymbolDetection = handleSymbolDetection;
-handleSymbolDetection = function(message, tab) {
-    trackEvent('symbol_detected', { symbol: message.symbol, source: message.source });
-    return originalHandleSymbolDetection(message, tab);
-};
-
-const originalFetchAnalysisFromAPI = fetchAnalysisFromAPI;
-fetchAnalysisFromAPI = async function(symbol, options, sendResponse) {
-    trackEvent('api_request', { symbol, endpoint: 'analysis' });
-    
+chrome.contextMenus.onClicked.addListener((info, tab) => {
     try {
-        await originalFetchAnalysisFromAPI(symbol, options, sendResponse);
-        trackEvent('successful_analysis', { symbol });
+        switch (info.menuItemId) {
+            case 'analyze-symbol':
+                if (info.selectionText) {
+                    const symbol = info.selectionText.trim().toUpperCase();
+                    
+                    // Validate basic symbol format
+                    if (/^[A-Z0-9.-]{1,10}$/.test(symbol)) {
+                        // Send to content script to trigger analysis
+                        chrome.tabs.sendMessage(tab.id, {
+                            type: 'ANALYZE_SYMBOL',
+                            symbol: symbol
+                        });
+                        
+                        console.log(`📊 Context menu analysis triggered for: ${symbol}`);
+                        trackEvent('context_menu_analysis', { symbol });
+                    }
+                }
+                break;
+                
+            case 'detect-symbol':
+                // Force symbol detection
+                chrome.tabs.sendMessage(tab.id, {
+                    type: 'FORCE_DETECTION'
+                });
+                
+                console.log('🔍 Forced symbol detection triggered');
+                trackEvent('forced_detection', { tabId: tab.id });
+                break;
+        }
     } catch (error) {
-        trackEvent('error', { symbol, error: error.message });
-        throw error;
+        console.error('❌ Context menu click error:', error);
     }
-};
-
-// ===== DEBUGGING AND DEVELOPMENT HELPERS =====
-if (chrome.runtime.getManifest().version.includes('dev') || 
-    chrome.runtime.getManifest().name.includes('Development')) {
-    
-    // Development mode helpers
-    globalThis.makesALotDebug = {
-        state,
-        config: CONFIG,
-        analytics: getAnalytics,
-        clearCache: () => {
-            state.apiCache.clear();
-            console.log('🧹 Debug: Cache cleared');
-        },
-        testSymbolDetection: (symbol, source = 'manual') => {
-            handleSymbolDetection({
-                symbol,
-                source,
-                url: 'debug://test',
-                hostname: 'debug.test',
-                confidence: 0.9
-            }, { id: 999 });
-        },
-        forceCleanup: cleanupOldData,
-        getApiStatus: () => state.apiStatus
-    };
-    
-    console.log('🔧 Development mode: Debug helpers available at globalThis.makesALotDebug');
-}
-
-// ===== EXTENSION UPDATE HANDLING =====
-chrome.runtime.onUpdateAvailable.addListener((details) => {
-    console.log('🔄 Extension update available:', details.version);
-    
-    // Optionally auto-reload after a delay
-    setTimeout(() => {
-        chrome.runtime.reload();
-    }, 30000); // 30 seconds delay
 });
 
 // ===== WINDOW FOCUS TRACKING =====
@@ -826,6 +956,8 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local') {
         // Monitor storage usage
         chrome.storage.local.getBytesInUse(null, (bytesInUse) => {
+            if (chrome.runtime.lastError) return;
+            
             const maxBytes = chrome.storage.local.QUOTA_BYTES || 5242880; // 5MB default
             const usagePercent = Math.round((bytesInUse / maxBytes) * 100);
             
@@ -838,29 +970,114 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
 });
 
-// ===== NETWORK STATUS MONITORING =====
-let networkStatus = 'online';
-
-function handleNetworkChange() {
-    const wasOffline = networkStatus === 'offline';
-    networkStatus = navigator.onLine ? 'online' : 'offline';
-    
-    console.log(`🌐 Network status: ${networkStatus}`);
-    
-    if (wasOffline && networkStatus === 'online') {
-        // Back online - refresh API status
-        console.log('🔄 Back online, checking API status...');
-        setTimeout(performApiHealthCheck, 1000);
+// ===== NOTIFICATION SYSTEM =====
+async function showNotification(title, message, type = 'basic') {
+    try {
+        const notificationId = await chrome.notifications.create({
+            type: type,
+            iconUrl: 'icons/icon48.png',
+            title: title,
+            message: message
+        });
+        
+        console.log(`🔔 Notification shown: ${notificationId}`);
+        return notificationId;
+    } catch (error) {
+        console.log('⚠️ Notifications not available:', error.message);
+        return null;
     }
 }
 
-// Note: Service workers don't have access to navigator.onLine
-// This would be handled in content scripts or popup
+// ===== ERROR HANDLING =====
+self.addEventListener('error', (event) => {
+    console.error('❌ Background script error:', event.error);
+    trackEvent('error', { context: 'global', error: event.error?.message });
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+    console.error('❌ Unhandled promise rejection:', event.reason);
+    trackEvent('error', { context: 'promise_rejection', error: event.reason?.message });
+});
+
+// ===== EXTENSION UPDATE HANDLING =====
+chrome.runtime.onUpdateAvailable.addListener((details) => {
+    console.log('🔄 Extension update available:', details.version);
+    
+    // Show notification about update
+    showNotification(
+        'MakesALot Update Available',
+        `Version ${details.version} is ready to install. Extension will restart automatically in 30 seconds.`,
+        'basic'
+    );
+    
+    // Auto-reload after a delay
+    setTimeout(() => {
+        chrome.runtime.reload();
+    }, 30000); // 30 seconds delay
+});
+
+// ===== DEBUGGING AND DEVELOPMENT HELPERS =====
+function setupDevelopmentHelpers() {
+    if (chrome.runtime.getManifest().version_name?.includes('dev') || 
+        chrome.runtime.getManifest().name.includes('Development')) {
+        
+        // Development mode helpers
+        globalThis.makesALotDebug = {
+            state,
+            config: CONFIG,
+            analytics: getAnalytics,
+            clearCache: () => {
+                state.apiCache.clear();
+                console.log('🧹 Debug: Cache cleared');
+            },
+            clearSymbols: () => {
+                state.symbolData.clear();
+                console.log('🧹 Debug: Symbols cleared');
+            },
+            testSymbolDetection: (symbol, source = 'manual') => {
+                handleSymbolDetection({
+                    symbol,
+                    source,
+                    url: 'debug://test',
+                    hostname: 'debug.test',
+                    confidence: 0.9,
+                    timestamp: Date.now()
+                }, { id: 999 });
+            },
+            forceCleanup: cleanupOldData,
+            getApiStatus: () => state.apiStatus,
+            testApiRequest: async (endpoint) => {
+                try {
+                    const result = await makeAPIRequest(endpoint);
+                    console.log('Debug API test result:', result);
+                    return result;
+                } catch (error) {
+                    console.error('Debug API test error:', error);
+                    throw error;
+                }
+            },
+            triggerAlarm: (alarmName) => {
+                chrome.alarms.create(alarmName, { when: Date.now() + 1000 });
+            }
+        };
+        
+        console.log('🔧 Development mode: Debug helpers available at globalThis.makesALotDebug');
+        
+        // Additional dev logging
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, [new Date().toISOString(), ...args]);
+        };
+    }
+}
 
 // ===== FINAL INITIALIZATION =====
 async function initializeExtension() {
     try {
-        console.log('🔧 Initializing extension...');
+        console.log('🔧 Initializing MakesALot Extension v2.1...');
+        
+        // Setup development helpers if in dev mode
+        setupDevelopmentHelpers();
         
         // Check initial API status
         await performApiHealthCheck();
@@ -868,29 +1085,44 @@ async function initializeExtension() {
         // Clean up any orphaned data
         cleanupOldData();
         
-        // Set up performance monitoring
-        console.log('📊 Analytics initialized:', getAnalytics());
+        // Log initial analytics
+        console.log('📊 Initial analytics:', getAnalytics());
         
         console.log('✅ Extension fully initialized');
         
     } catch (error) {
         console.error('❌ Initialization error:', error);
+        trackEvent('error', { context: 'initialization', error: error.message });
     }
 }
-
-// Run initialization
-initializeExtension();
 
 // ===== GRACEFUL SHUTDOWN =====
 self.addEventListener('beforeunload', () => {
     console.log('👋 Background script shutting down...');
     
-    // Clear sensitive data
-    state.apiCache.clear();
-    
     // Log final analytics
-    console.log('📊 Final analytics:', getAnalytics());
+    const finalAnalytics = getAnalytics();
+    console.log('📊 Final session analytics:', finalAnalytics);
+    
+    // Clear sensitive data from memory
+    state.apiCache.clear();
+    state.symbolData.clear();
+    
+    console.log('✅ Shutdown complete');
 });
+
+// ===== STARTUP EXECUTION =====
+console.log('✅ MakesALot Background Script Loaded Successfully');
+console.log(`🔧 Configuration:`, {
+    apiUrl: CONFIG.API_BASE_URL,
+    cacheSize: CONFIG.MAX_CACHE_SIZE,
+    cacheTTL: `${CONFIG.CACHE_DURATION / 1000}s`,
+    retryAttempts: CONFIG.RETRY_ATTEMPTS,
+    timeouts: `${CONFIG.API_TIMEOUT / 1000}s`
+});
+
+// Run initialization
+initializeExtension();
 
 // ===== EXPORT FOR TESTING =====
 if (typeof module !== 'undefined' && module.exports) {
@@ -900,128 +1132,9 @@ if (typeof module !== 'undefined' && module.exports) {
         makeAPIRequest,
         handleSymbolDetection,
         cleanupOldData,
-        getAnalytics
+        getAnalytics,
+        trackEvent,
+        testAPIConnection,
+        fetchAnalysisFromAPI
     };
-} text: '' });
-        chrome.action.setTitle({ title: 'MakesALot Trading Assistant' });
-        
-        // Initialize storage cleanup
-        cleanupOldData();
-        
-        console.log('✅ Extension initialized successfully');
-    } catch (error) {
-        console.error('❌ Initialization error:', error);
-    }
-});
-
-// ===== MESSAGE HANDLING =====
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('📨 Background received message:', message.type, sender.tab?.id);
-    
-    try {
-        switch (message.type) {
-            case 'SYMBOL_DETECTED':
-                handleSymbolDetection(message, sender.tab);
-                sendResponse({ success: true });
-                break;
-                
-            case 'GET_SYMBOL':
-                getDetectedSymbol(sender.tab?.id, sendResponse);
-                return true; // Keep channel open
-                
-            case 'CLEAR_SYMBOL':
-                clearSymbolForTab(sender.tab?.id);
-                sendResponse({ success: true });
-                break;
-                
-            case 'TEST_API':
-                testAPIConnection(sendResponse);
-                return true; // Keep channel open
-                
-            case 'FETCH_ANALYSIS':
-                fetchAnalysisFromAPI(message.symbol, message.options, sendResponse);
-                return true; // Keep channel open
-                
-            case 'FETCH_QUOTE':
-                fetchQuoteFromAPI(message.symbol, sendResponse);
-                return true; // Keep channel open
-                
-            case 'VALIDATE_SYMBOL':
-                validateSymbolWithAPI(message.symbol, sendResponse);
-                return true; // Keep channel open
-                
-            default:
-                console.log('❓ Unknown message type:', message.type);
-                sendResponse({ error: 'Unknown message type' });
-        }
-    } catch (error) {
-        console.error('❌ Error handling message:', error);
-        sendResponse({ error: error.message });
-    }
-});
-
-// ===== SYMBOL DETECTION HANDLING =====
-function handleSymbolDetection(message, tab) {
-    if (!tab || !tab.id) {
-        console.error('❌ Invalid tab information');
-        return;
-    }
-
-    const { symbol, source, url, hostname, confidence } = message;
-    
-    console.log(`📊 Symbol detected: ${symbol} from ${source} on ${hostname} (confidence: ${confidence || 'unknown'})`);
-    
-    try {
-        // Store symbol data
-        const symbolInfo = {
-            symbol,
-            source,
-            url,
-            hostname,
-            confidence: confidence || 0.8,
-            detected_at: Date.now(),
-            tab_id: tab.id
-        };
-        
-        // Store in memory and chrome storage
-        state.symbolData.set(tab.id, symbolInfo);
-        
-        chrome.storage.local.set({
-            [`symbol_${tab.id}`]: symbol,
-            [`source_${tab.id}`]: source,
-            [`url_${tab.id}`]: url,
-            [`detected_at_${tab.id}`]: Date.now(),
-            [`confidence_${tab.id}`]: confidence || 0.8,
-            // Global storage for popup access
-            'detected_symbol': symbol,
-            'detected_source': source,
-            'detected_url': url,
-            'detected_at': Date.now(),
-            'detected_confidence': confidence || 0.8
-        }).then(() => {
-            console.log('💾 Symbol stored successfully');
-            updateBadgeForSymbol(symbol, source, tab.id);
-            
-            // Optional: Preload analysis for high confidence detections
-            if (confidence && confidence > 0.9) {
-                preloadAnalysis(symbol);
-            }
-        }).catch(error => {
-            console.error('❌ Storage error:', error);
-        });
-        
-    } catch (error) {
-        console.error('❌ Error storing symbol:', error);
-    }
 }
-
-function updateBadgeForSymbol(symbol, source, tabId) {
-    try {
-        // Truncate symbol for badge (max 4 characters)
-        const badgeText = symbol && symbol.length > 4 ? symbol.substring(0, 4) : symbol || '';
-        
-        chrome.action.setBadgeText({ text: badgeText, tabId });
-        chrome.action.setTitle({
-            title: `MakesALot Trading Assistant - ${symbol || 'No Symbol Detected'}`,
-            tabId
-        });
