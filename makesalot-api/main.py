@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware  # 👈 IMPORTANTE
 from pydantic import BaseModel
 from typing import Optional, Literal
 from fetcher import get_data_api
@@ -13,6 +14,15 @@ from strategies import (
 import pandas as pd
 
 app = FastAPI(title="MakesALot Trading API")
+
+# 👇 Adicionar CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ← Usa "*" só em desenvolvimento. Para produção: substitui pelo ID da tua extensão
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Modelos para o POST
 class SignalRequest(BaseModel):
