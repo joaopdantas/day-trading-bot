@@ -225,6 +225,7 @@ body {
     font-size: 11px;
     cursor: pointer;
     transition: all 0.3s;
+    margin-bottom: 16px;
 }
 
 .time-btn.active {

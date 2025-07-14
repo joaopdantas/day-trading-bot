@@ -1,125 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MakesALot Trading Assistant</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MakesALot Trading Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">📈 MakesALot</div>
-      <div class="subtitle">AI Trading Assistant</div>
-    </div>
-
-    <div class="api-status" id="apiStatus">Checking API connection...</div>
-
-    <div class="form-group">
-      <label for="symbol">Stock Symbol</label>
-      <input type="text" id="symbol" placeholder="Enter symbol (e.g., MSFT)" />
-    </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label for="apiType">API Provider</label>
-        <select id="apiType">
-          <option value="auto">Auto Detect</option>
-          <option value="alpha_vantage">Alpha Vantage</option>
-          <option value="yahoo_finance">Yahoo Finance</option>
-          <option value="polygon">Polygon</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="strategy">Strategy</label>
-        <select id="strategy">
-          <option value="technical">Technical Analysis</option>
-          <option value="ml">Machine Learning</option>
-          <option value="buy_and_hold">Buy and Hold</option>
-          <option value="rsi_divergence">RSI Divergence</option>
-          <option value="hybrid">Hybrid RSI</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label for="interval">Interval</label>
-        <select id="interval">
-          <option value="1d">1 Day</option>
-          <option value="1wk">1 Week</option>
-          <option value="1mo">1 Month</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" />
-      </div>
-
-      <div class="form-group">
-        <label for="endDate">End Date</label>
-        <input type="date" id="endDate" />
-      </div>
-    </div>
-
-    <div class="time-buttons">
-      <button class="time-btn" data-period="1m">1M</button>
-      <button class="time-btn active" data-period="3m">3M</button>
-      <button class="time-btn" data-period="6m">6M</button>
-      <button class="time-btn" data-period="12m">12M</button>
-    </div>
-
-    <button class="analyze-btn" id="analyzeBtn">📊 Analyze Stock</button>
-
-    <div class="loading" id="loading" style="display: none;">
-      <div class="spinner"></div>
-      <span>Analyzing...</span>
-    </div>
-
-    <div class="error" id="error"></div>
-
-    <div class="results" id="results" style="display: none;">
-      <div class="recommendation">
-        <div class="recommendation-text" id="recommendationText">HOLD</div>
-        <div class="confidence" id="confidenceText">Confidence: 50%</div>
-        <div class="analysis-summary" id="analysisSummary">Based on current data.</div>
-      </div>
-
-      <div class="price-info">
-        <div>
-          <div class="current-price" id="currentPrice">$0.00</div>
-          <div id="priceDate" style="font-size: 10px; opacity: 0.8;">Current Price</div>
-        </div>
-        <div class="price-change" id="priceChange">+0.00%</div>
-      </div>
-
-      <div class="chart-container">
-        <div class="chart-header">
-          <div class="chart-title">Price Chart</div>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📈 MakesALot</div>
+            <div class="subtitle">AI Trading Assistant</div>
         </div>
 
-        <div class="chart-display">
-          <svg class="chart-svg" id="chartSvg" width="300" height="150">
-            <g class="chart-content" id="chartContent"></g>
-          </svg>
+        <div class="api-status" id="apiStatus">Checking API connection...</div>
+
+        <div class="form-group">
+            <label for="symbol">Stock Symbol</label>
+            <input type="text" id="symbol" placeholder="Enter symbol (e.g., MSFT)" />
         </div>
 
-        <div class="chart-info-grid">
-          <div class="chart-stat">
-            <div class="chart-stat-label">Period High</div>
-            <div class="chart-stat-value" id="highPrice">--</div>
-          </div>
-          <div class="chart-stat">
-            <div class="chart-stat-label">Period Low</div>
-            <div class="chart-stat-value" id="lowPrice">--</div>
-          </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="apiType">API Provider</label>
+                <select id="apiType">
+                    <option value="polygon">Polygon</option>
+                    <option value="alpha_vantage">Alpha Vantage</option>
+                    <option value="yahoo_finance">Yahoo Finance</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="strategy">Strategy</label>
+                <select id="strategy">
+                    <option value="technical">Technical Analysis</option>
+                    <option value="ml">Machine Learning</option>
+                    <option value="buy_and_hold">Buy and Hold</option>
+                    <option value="rsi_divergence">RSI Divergence</option>
+                    <option value="hybrid">Hybrid RSI</option>
+                </select>
+            </div>
         </div>
-      </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="interval">Interval</label>
+                <select id="interval">
+                    <option value="1m">1 Minutes</option>
+                    <option value="5m">5 Minutes</option>
+                    <option value="1h">1 Hour</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1wk">1 Week</option>
+                    <option value="1mo">1 Month</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="time-buttons">
+            <button class="time-btn" data-period="1m">1M</button>
+            <button class="time-btn active" data-period="3m">3M</button>
+            <button class="time-btn" data-period="6m">6M</button>
+            <button class="time-btn" data-period="12m">12M</button>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn">📊 Analyze Stock</button>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <span>Analyzing...</span>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="recommendation">
+                <div class="recommendation-text" id="recommendationText">HOLD</div>
+                <div class="confidence" id="confidenceText">Confidence: 50%</div>
+                <div class="analysis-summary" id="analysisSummary">Based on current data.</div>
+            </div>
+
+            <div class="price-info">
+                <div>
+                    <div class="current-price" id="currentPrice">$0.00</div>
+                    <div id="priceDate" style="font-size: 10px; opacity: 0.8;">Current Price</div>
+                </div>
+                <div class="price-change" id="priceChange">+0.00%</div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">Price Chart</div>
+                </div>
+
+                <div class="chart-display">
+                    <svg class="chart-svg" id="chartSvg" width="300" height="150">
+                        <g class="chart-content" id="chartContent"></g>
+                    </svg>
+                </div>
+
+                <div class="chart-info-grid">
+                    <div class="chart-stat">
+                        <div class="chart-stat-label">Period High</div>
+                        <div class="chart-stat-value" id="highPrice">--</div>
+                    </div>
+                    <div class="chart-stat">
+                        <div class="chart-stat-label">Period Low</div>
+                        <div class="chart-stat-value" id="lowPrice">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="../scripts/popup.js"></script>
+    <script src="../scripts/popup.js"></script>
 </body>
+
 </html>
