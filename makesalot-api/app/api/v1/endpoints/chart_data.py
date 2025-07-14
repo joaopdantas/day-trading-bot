@@ -1,80 +1,88 @@
 """
-Chart Data Endpoints for MakesALot Trading API
+Chart Data by Months Endpoint - Addition to chart_data.py
 """
 
-import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
-
-import pandas as pd
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Query
 from pydantic import BaseModel
 
-from ..endpoints.fetcher import get_data_api
+# Adicionar estas classes e endpoint ao arquivo chart_data.py existente
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter()
-
-# Response Models
-class ChartDataPoint(BaseModel):
-    timestamp: str
+class MonthlyChartDataPoint(BaseModel):
+    date: str  # YYYY-MM-DD format
     open: float
     high: float
     low: float
     close: float
     volume: int
+    change_percent: Optional[float] = None
 
-class ChartDataResponse(BaseModel):
+class MonthlyChartResponse(BaseModel):
     symbol: str
-    interval: str
-    data: List[ChartDataPoint]
+    months: int
+    data: List[MonthlyChartDataPoint]
     total_points: int
     start_date: str
     end_date: str
+    current_price: float
+    period_change: float
+    period_change_percent: float
+    highest_price: float
+    lowest_price: float
+    average_volume: int
     data_source: str
+    timestamp: str
 
-@router.get("/data/{symbol}", response_model=ChartDataResponse)
-async def get_chart_data(
+@router.get("/monthly-data/{symbol}", response_model=MonthlyChartResponse)
+async def get_monthly_chart_data(
     symbol: str,
-    interval: str = Query("1d", description="Time interval (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo)"),
-    period: str = Query("3m", description="Time period (1d, 5d, 1mo, 3m, 6m, 1y, 2y, 5y, 10y, ytd, max)"),
-    start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
-    end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)")
+    months: int = Query(3, ge=1, le=12, description="Number of months (1, 3, or 12)"),
+    include_volume: bool = Query(True, description="Include volume data")
 ):
     """
-    Get historical chart data for a symbol
+    Get chart data for specified number of months (1, 3, or 12)
+    
+    Args:
+        symbol: Stock symbol (e.g., MSFT, AAPL)
+        months: Number of months to retrieve (1, 3, or 12)
+        include_volume: Whether to include volume data
+    
+    Returns:
+        Chart data with OHLCV information for the specified period
     """
     try:
         symbol = symbol.upper().strip()
-        logger.info(f"Fetching chart data for {symbol}, interval: {interval}, period: {period}")
+        
+        # Validate months parameter
+        if months not in [1, 3, 12]:
+            raise HTTPException(
+                status_code=400, 
+                detail="Months parameter must be 1, 3, or 12"
+            )
+        
+        logger.info(f"Fetching {months} months of chart data for {symbol}")
         
         # Calculate date range
-        end_dt = datetime.now()
-        if end_date:
-            try:
-                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30)  # Approximate months to days
         
-        # Calculate start date based on period
-        if start_date:
-            try:
-                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
-        else:
-            start_dt = calculate_start_date(end_dt, period)
+        # Adjust for weekends and get more data to ensure we have enough trading days
+        start_date = start_date - timedelta(days=10)  # Buffer for weekends/holidays
         
-        # Validate date range
-        if start_dt >= end_dt:
-            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+        # Determine appropriate interval based on months
+        if months == 1:
+            interval = "1d"  # Daily data for 1 month
+        elif months == 3:
+            interval = "1d"  # Daily data for 3 months
+        else:  # 12 months
+            interval = "1d"  # Daily data for 12 months (could use weekly but keeping daily)
         
         # Fetch data from multiple sources
         historical_data = pd.DataFrame()
         data_source = "unknown"
         
-        # Try different APIs
+        # Try different APIs in order of preference
         api_sources = ['polygon', 'yahoo_finance', 'alpha_vantage']
         
         for api_name in api_sources:
@@ -83,8 +91,8 @@ async def get_chart_data(
                 historical_data = data_fetcher.fetch_historical_data(
                     symbol=symbol,
                     interval=interval,
-                    start_date=start_dt,
-                    end_date=end_dt
+                    start_date=start_date,
+                    end_date=end_date
                 )
                 
                 if not historical_data.empty:
@@ -99,310 +107,153 @@ async def get_chart_data(
         if historical_data.empty:
             # Generate mock data for demo purposes
             logger.warning(f"No real data available for {symbol}, generating mock data")
-            historical_data = generate_mock_chart_data(symbol, start_dt, end_dt, interval)
+            historical_data = generate_mock_monthly_data(symbol, months)
             data_source = "mock_data"
         
-        # Convert to response format
+        # Filter to exact number of months from end_date
+        actual_start_date = end_date - timedelta(days=months * 30)
+        historical_data = historical_data[historical_data.index >= actual_start_date]
+        
+        # Ensure we have data
+        if historical_data.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No data found for {symbol} in the last {months} months"
+            )
+        
+        # Calculate additional metrics
+        current_price = float(historical_data['close'].iloc[-1])
+        start_price = float(historical_data['close'].iloc[0])
+        period_change = current_price - start_price
+        period_change_percent = (period_change / start_price) * 100 if start_price != 0 else 0
+        
+        highest_price = float(historical_data['high'].max())
+        lowest_price = float(historical_data['low'].min())
+        average_volume = int(historical_data['volume'].mean()) if 'volume' in historical_data.columns else 1000000
+        
+        # Convert to response format with daily change percentages
         chart_points = []
+        prev_close = None
+        
         for timestamp, row in historical_data.iterrows():
-            chart_points.append(ChartDataPoint(
-                timestamp=timestamp.isoformat(),
+            current_close = float(row['close'])
+            
+            # Calculate daily change percentage
+            daily_change_percent = None
+            if prev_close is not None and prev_close != 0:
+                daily_change_percent = ((current_close - prev_close) / prev_close) * 100
+            
+            chart_point = MonthlyChartDataPoint(
+                date=timestamp.strftime("%Y-%m-%d"),
                 open=float(row['open']),
                 high=float(row['high']),
                 low=float(row['low']),
-                close=float(row['close']),
-                volume=int(row.get('volume', 1000000))
-            ))
-        
-        response = ChartDataResponse(
-            symbol=symbol,
-            interval=interval,
-            data=chart_points,
-            total_points=len(chart_points),
-            start_date=start_dt.strftime("%Y-%m-%d"),
-            end_date=end_dt.strftime("%Y-%m-%d"),
-            data_source=data_source
-        )
-        
-        logger.info(f"Chart data for {symbol}: {len(chart_points)} points from {data_source}")
-        return response
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Chart data error for {symbol}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch chart data: {str(e)}"
-        )
-
-@router.get("/indicators/{symbol}")
-async def get_chart_with_indicators(
-    symbol: str,
-    interval: str = Query("1d", description="Time interval"),
-    period: str = Query("3m", description="Time period"),
-    indicators: str = Query("sma20,sma50,rsi", description="Comma-separated list of indicators")
-):
-    """
-    Get chart data with technical indicators overlay
-    """
-    try:
-        symbol = symbol.upper().strip()
-        indicator_list = [ind.strip().lower() for ind in indicators.split(',')]
-        
-        logger.info(f"Fetching chart with indicators for {symbol}: {indicator_list}")
-        
-        # Get base chart data
-        end_dt = datetime.now()
-        start_dt = calculate_start_date(end_dt, period)
-        
-        # Fetch historical data
-        historical_data = pd.DataFrame()
-        data_source = "unknown"
-        
-        for api_name in ['polygon', 'yahoo_finance']:
-            try:
-                data_fetcher = get_data_api(api_name)
-                historical_data = data_fetcher.fetch_historical_data(
-                    symbol=symbol,
-                    interval=interval,
-                    start_date=start_dt,
-                    end_date=end_dt
-                )
-                
-                if not historical_data.empty:
-                    data_source = api_name
-                    break
-                    
-            except Exception as e:
-                logger.warning(f"API {api_name} failed: {e}")
-                continue
-        
-        if historical_data.empty:
-            historical_data = generate_mock_chart_data(symbol, start_dt, end_dt, interval)
-            data_source = "mock_data"
-        
-        # Calculate indicators
-        from ..indicators.technical import TechnicalIndicators
-        
-        close_prices = historical_data['close']
-        indicator_data = {}
-        
-        for indicator in indicator_list:
-            try:
-                if indicator == 'sma20':
-                    indicator_data['sma20'] = TechnicalIndicators.calculate_sma(close_prices, 20).tolist()
-                elif indicator == 'sma50':
-                    indicator_data['sma50'] = TechnicalIndicators.calculate_sma(close_prices, 50).tolist()
-                elif indicator == 'ema12':
-                    indicator_data['ema12'] = TechnicalIndicators.calculate_ema(close_prices, 12).tolist()
-                elif indicator == 'ema26':
-                    indicator_data['ema26'] = TechnicalIndicators.calculate_ema(close_prices, 26).tolist()
-                elif indicator == 'rsi':
-                    indicator_data['rsi'] = TechnicalIndicators.calculate_rsi(close_prices).tolist()
-                elif indicator == 'macd':
-                    macd_data = TechnicalIndicators.calculate_macd(close_prices)
-                    indicator_data['macd'] = macd_data['macd'].tolist()
-                    indicator_data['macd_signal'] = macd_data['signal'].tolist()
-                elif indicator.startswith('bb'):
-                    bb_data = TechnicalIndicators.calculate_bollinger_bands(close_prices)
-                    indicator_data['bb_upper'] = bb_data['upper'].tolist()
-                    indicator_data['bb_middle'] = bb_data['middle'].tolist()
-                    indicator_data['bb_lower'] = bb_data['lower'].tolist()
-                    
-            except Exception as e:
-                logger.warning(f"Failed to calculate {indicator}: {e}")
-                continue
+                close=current_close,
+                volume=int(row.get('volume', average_volume)),
+                change_percent=daily_change_percent
+            )
+            
+            chart_points.append(chart_point)
+            prev_close = current_close
         
         # Build response
-        chart_data = []
-        timestamps = historical_data.index.tolist()
+        response = MonthlyChartResponse(
+            symbol=symbol,
+            months=months,
+            data=chart_points,
+            total_points=len(chart_points),
+            start_date=historical_data.index[0].strftime("%Y-%m-%d"),
+            end_date=historical_data.index[-1].strftime("%Y-%m-%d"),
+            current_price=current_price,
+            period_change=period_change,
+            period_change_percent=period_change_percent,
+            highest_price=highest_price,
+            lowest_price=lowest_price,
+            average_volume=average_volume,
+            data_source=data_source,
+            timestamp=datetime.now().isoformat()
+        )
         
-        for i, (timestamp, row) in enumerate(historical_data.iterrows()):
-            point_data = {
-                "timestamp": timestamp.isoformat(),
-                "open": float(row['open']),
-                "high": float(row['high']),
-                "low": float(row['low']),
-                "close": float(row['close']),
-                "volume": int(row.get('volume', 1000000))
-            }
-            
-            # Add indicator values for this point
-            for indicator_name, values in indicator_data.items():
-                if i < len(values):
-                    value = values[i]
-                    if pd.notna(value):
-                        point_data[indicator_name] = float(value)
-            
-            chart_data.append(point_data)
+        logger.info(f"Monthly chart data for {symbol}: {len(chart_points)} points, "
+                   f"{months} months, {period_change_percent:+.2f}% change")
         
-        response = {
-            "symbol": symbol,
-            "interval": interval,
-            "period": period,
-            "data": chart_data,
-            "indicators": list(indicator_data.keys()),
-            "total_points": len(chart_data),
-            "data_source": data_source,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        logger.info(f"Chart with indicators for {symbol}: {len(chart_data)} points, {len(indicator_data)} indicators")
         return response
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Chart with indicators error for {symbol}: {e}")
+        logger.error(f"Monthly chart data error for {symbol}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch chart with indicators: {str(e)}"
+            detail=f"Failed to fetch monthly chart data: {str(e)}"
         )
 
-@router.get("/volume-profile/{symbol}")
-async def get_volume_profile(
-    symbol: str,
-    period: str = Query("1m", description="Time period for volume profile analysis")
-):
-    """
-    Get volume profile analysis for a symbol
-    """
-    try:
-        symbol = symbol.upper().strip()
-        logger.info(f"Generating volume profile for {symbol}")
-        
-        # Get chart data
-        end_dt = datetime.now()
-        start_dt = calculate_start_date(end_dt, period)
-        
-        # Fetch data
-        historical_data = pd.DataFrame()
-        for api_name in ['polygon', 'yahoo_finance']:
-            try:
-                data_fetcher = get_data_api(api_name)
-                historical_data = data_fetcher.fetch_historical_data(
-                    symbol=symbol,
-                    interval="1d",
-                    start_date=start_dt,
-                    end_date=end_dt
-                )
-                if not historical_data.empty:
-                    break
-            except Exception:
-                continue
-        
-        if historical_data.empty:
-            historical_data = generate_mock_chart_data(symbol, start_dt, end_dt, "1d")
-        
-        # Calculate volume profile
-        volume_profile = calculate_volume_profile(historical_data)
-        
-        response = {
-            "symbol": symbol,
-            "period": period,
-            "volume_profile": volume_profile,
-            "analysis": {
-                "poc_price": volume_profile['poc_price'] if volume_profile else None,
-                "value_area_high": volume_profile['value_area_high'] if volume_profile else None,
-                "value_area_low": volume_profile['value_area_low'] if volume_profile else None,
-                "total_volume": sum(historical_data['volume']) if not historical_data.empty else 0
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        return response
-        
-    except Exception as e:
-        logger.error(f"Volume profile error for {symbol}: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate volume profile: {str(e)}"
-        )
-
-def calculate_start_date(end_date: datetime, period: str) -> datetime:
-    """Calculate start date based on period string"""
-    period_map = {
-        "1d": timedelta(days=1),
-        "5d": timedelta(days=5),
-        "1mo": timedelta(days=30),
-        "3m": timedelta(days=90),
-        "6m": timedelta(days=180),
-        "1y": timedelta(days=365),
-        "2y": timedelta(days=730),
-        "5y": timedelta(days=1825),
-        "10y": timedelta(days=3650),
-        "ytd": end_date - datetime(end_date.year, 1, 1),
-        "max": timedelta(days=3650)  # Default to 10 years for max
-    }
-    
-    delta = period_map.get(period, timedelta(days=90))  # Default to 3 months
-    
-    if period == "ytd":
-        return datetime(end_date.year, 1, 1)
-    else:
-        return end_date - delta
-
-def generate_mock_chart_data(symbol: str, start_date: datetime, end_date: datetime, interval: str) -> pd.DataFrame:
-    """Generate realistic mock chart data"""
+def generate_mock_monthly_data(symbol: str, months: int) -> pd.DataFrame:
+    """Generate realistic mock data for specified months"""
     import numpy as np
     
     # Base prices for known symbols
     base_prices = {
         'MSFT': 350, 'AAPL': 180, 'GOOGL': 140, 'AMZN': 150,
-        'TSLA': 200, 'NVDA': 800, 'META': 300, 'NFLX': 400
+        'TSLA': 200, 'NVDA': 800, 'META': 300, 'NFLX': 400,
+        'SPY': 450, 'QQQ': 380, 'VOO': 400
     }
     
     base_price = base_prices.get(symbol, 100 + np.random.random() * 200)
     
-    # Calculate frequency based on interval
-    freq_map = {
-        '1m': 'T', '5m': '5T', '15m': '15T', '30m': '30T',
-        '1h': 'H', '1d': 'D', '1wk': 'W', '1mo': 'M'
-    }
+    # Generate dates (business days only)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=months * 30)
     
-    freq = freq_map.get(interval, 'D')
+    # Create business day range
+    date_range = pd.bdate_range(start=start_date, end=end_date)
     
-    # Generate date range
-    if interval in ['1m', '5m', '15m', '30m', '1h']:
-        # For intraday data, limit to business hours
-        date_range = pd.date_range(start=start_date, end=end_date, freq=freq)
-        # Filter to business hours (9:30 AM to 4:00 PM ET, simplified)
-        date_range = date_range[(date_range.hour >= 9) & (date_range.hour <= 16)]
-    else:
-        date_range = pd.date_range(start=start_date, end=end_date, freq=freq)
+    # Generate realistic price movements
+    n_days = len(date_range)
     
-    # Generate price movements
-    n_periods = len(date_range)
-    returns = np.random.normal(0.0005, 0.02, n_periods)  # Daily return ~0.05%, volatility ~2%
+    # Adjust volatility based on months (longer periods = more potential for larger moves)
+    daily_volatility = 0.015 if months == 1 else 0.018 if months == 3 else 0.020
     
-    # For intraday data, reduce volatility
-    if interval in ['1m', '5m', '15m', '30m', '1h']:
-        returns = returns * 0.1  # Reduce intraday volatility
+    # Generate returns with some trend
+    trend = np.random.normal(0.0003, 0.0001)  # Small positive bias
+    returns = np.random.normal(trend, daily_volatility, n_days)
+    
+    # Add some momentum and mean reversion
+    for i in range(1, len(returns)):
+        momentum = returns[i-1] * 0.1  # 10% momentum
+        returns[i] += momentum
     
     # Generate prices
     prices = [base_price]
     for ret in returns[1:]:
         new_price = prices[-1] * (1 + ret)
-        prices.append(max(new_price, 1.0))
+        prices.append(max(new_price, 1.0))  # Ensure price doesn't go negative
     
-    # Generate OHLCV data
+    # Generate OHLC data
     data = []
     for i, (date, close) in enumerate(zip(date_range, prices)):
         open_price = prices[i-1] if i > 0 else close
         
-        # Generate realistic high/low
+        # Generate realistic intraday range
         daily_range = abs(close - open_price) + (close * 0.01 * np.random.random())
-        high = max(open_price, close) + (daily_range * np.random.random())
-        low = min(open_price, close) - (daily_range * np.random.random())
+        
+        # High and low with some randomness
+        if close > open_price:  # Up day
+            high = close + (daily_range * np.random.random() * 0.5)
+            low = open_price - (daily_range * np.random.random() * 0.3)
+        else:  # Down day
+            high = open_price + (daily_range * np.random.random() * 0.3)
+            low = close - (daily_range * np.random.random() * 0.5)
         
         # Ensure OHLC relationships are maintained
         high = max(high, open_price, close)
         low = min(low, open_price, close)
         
-        # Generate volume
-        base_volume = 1000000 if interval == '1d' else 50000
-        volume = int(base_volume * (0.5 + np.random.random()))
+        # Generate volume (higher volume on big moves)
+        price_change_pct = abs((close - open_price) / open_price) if open_price != 0 else 0
+        base_volume = 1000000
+        volume_multiplier = 1 + (price_change_pct * 2)  # More volume on big moves
+        volume = int(base_volume * volume_multiplier * (0.7 + np.random.random() * 0.6))
         
         data.append({
             'open': open_price,
@@ -413,69 +264,110 @@ def generate_mock_chart_data(symbol: str, start_date: datetime, end_date: dateti
         })
     
     df = pd.DataFrame(data, index=date_range)
-    logger.info(f"Generated {len(df)} periods of mock data for {symbol}")
+    logger.info(f"Generated {len(df)} days of mock data for {symbol} ({months} months)")
     return df
 
-def calculate_volume_profile(data: pd.DataFrame) -> dict:
-    """Calculate volume profile for price data"""
+# Endpoint para estatísticas rápidas do período
+@router.get("/monthly-stats/{symbol}")
+async def get_monthly_stats(
+    symbol: str,
+    months: int = Query(3, ge=1, le=12, description="Number of months (1, 3, or 12)")
+):
+    """
+    Get quick statistics for the specified period
+    """
     try:
-        if data.empty:
-            return {}
+        symbol = symbol.upper().strip()
         
-        # Get price range
-        price_min = data['low'].min()
-        price_max = data['high'].max()
+        if months not in [1, 3, 12]:
+            raise HTTPException(status_code=400, detail="Months must be 1, 3, or 12")
         
-        # Create price bins
-        n_bins = 50
-        price_bins = np.linspace(price_min, price_max, n_bins)
-        volume_at_price = {}
+        logger.info(f"Fetching {months} months stats for {symbol}")
         
-        # Distribute volume across price levels
-        for _, row in data.iterrows():
-            typical_price = (row['high'] + row['low'] + row['close']) / 3
-            volume = row['volume']
-            
-            # Find closest bin
-            bin_idx = np.digitize(typical_price, price_bins) - 1
-            bin_idx = max(0, min(bin_idx, len(price_bins) - 1))
-            
-            price_level = price_bins[bin_idx]
-            volume_at_price[price_level] = volume_at_price.get(price_level, 0) + volume
+        # Get data (reuse the monthly data logic)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30 + 10)
         
-        if not volume_at_price:
-            return {}
+        # Try to fetch real data
+        historical_data = pd.DataFrame()
+        for api_name in ['polygon', 'yahoo_finance']:
+            try:
+                data_fetcher = get_data_api(api_name)
+                historical_data = data_fetcher.fetch_historical_data(
+                    symbol=symbol,
+                    interval="1d",
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if not historical_data.empty:
+                    break
+            except Exception:
+                continue
         
-        # Find Point of Control (POC) - price with highest volume
-        poc_price = max(volume_at_price.keys(), key=lambda x: volume_at_price[x])
+        if historical_data.empty:
+            historical_data = generate_mock_monthly_data(symbol, months)
         
-        # Calculate Value Area (70% of volume)
-        total_volume = sum(volume_at_price.values())
-        target_volume = total_volume * 0.7
+        # Filter to exact months
+        actual_start_date = end_date - timedelta(days=months * 30)
+        historical_data = historical_data[historical_data.index >= actual_start_date]
         
-        # Sort by volume and find value area
-        sorted_prices = sorted(volume_at_price.keys(), key=lambda x: volume_at_price[x], reverse=True)
-        value_area_volume = 0
-        value_area_prices = []
+        if historical_data.empty:
+            raise HTTPException(status_code=404, detail="No data available")
         
-        for price in sorted_prices:
-            value_area_volume += volume_at_price[price]
-            value_area_prices.append(price)
-            if value_area_volume >= target_volume:
-                break
+        # Calculate statistics
+        current_price = float(historical_data['close'].iloc[-1])
+        start_price = float(historical_data['close'].iloc[0])
         
-        value_area_high = max(value_area_prices) if value_area_prices else poc_price
-        value_area_low = min(value_area_prices) if value_area_prices else poc_price
+        period_return = ((current_price - start_price) / start_price) * 100
         
-        return {
-            'price_levels': list(volume_at_price.keys()),
-            'volumes': list(volume_at_price.values()),
-            'poc_price': float(poc_price),
-            'value_area_high': float(value_area_high),
-            'value_area_low': float(value_area_low),
-            'total_volume': int(total_volume)
+        # Volatility (standard deviation of daily returns)
+        daily_returns = historical_data['close'].pct_change().dropna()
+        volatility = float(daily_returns.std() * np.sqrt(252) * 100)  # Annualized
+        
+        # Max drawdown
+        cumulative = (1 + daily_returns).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative - running_max) / running_max
+        max_drawdown = float(drawdown.min() * 100)
+        
+        # Best and worst days
+        best_day = float(daily_returns.max() * 100) if not daily_returns.empty else 0
+        worst_day = float(daily_returns.min() * 100) if not daily_returns.empty else 0
+        
+        # Trading days with gains vs losses
+        positive_days = (daily_returns > 0).sum()
+        negative_days = (daily_returns < 0).sum()
+        win_rate = (positive_days / len(daily_returns) * 100) if len(daily_returns) > 0 else 0
+        
+        stats = {
+            "symbol": symbol,
+            "period_months": months,
+            "current_price": current_price,
+            "start_price": start_price,
+            "period_return_percent": period_return,
+            "highest_price": float(historical_data['high'].max()),
+            "lowest_price": float(historical_data['low'].min()),
+            "volatility_percent": volatility,
+            "max_drawdown_percent": max_drawdown,
+            "best_day_percent": best_day,
+            "worst_day_percent": worst_day,
+            "win_rate_percent": win_rate,
+            "positive_days": int(positive_days),
+            "negative_days": int(negative_days),
+            "total_trading_days": len(historical_data),
+            "average_daily_volume": int(historical_data['volume'].mean()) if 'volume' in historical_data.columns else 0,
+            "period_label": f"{months} month{'s' if months > 1 else ''}",
+            "timestamp": datetime.now().isoformat()
         }
         
+        logger.info(f"Stats for {symbol} ({months}m): {period_return:+.2f}% return")
+        return stats
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Volume profile calculation error: {e}")
-        return {}
+        logger.error(f"Monthly stats error for {symbol}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get monthly stats: {str(e)}"
+        )
