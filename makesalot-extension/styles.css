@@ -405,3 +405,51 @@ body {
     font-size: 12px;
     font-weight: 600;
 }
+
+.price-chart-container {
+    transition: height 0.3s ease;
+    overflow: hidden;
+}
+
+.chart-6m .price-chart {
+    height: 130px !important;
+}
+
+.chart-1y .price-chart {
+    height: 120px !important;
+}
+
+/* Add scroll capability for very compressed charts */
+.chart-compressed {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Tooltip for compressed charts */
+.chart-tooltip {
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Chart grid lines for better readability */
+.chart-grid {
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 0.5px;
+}
+
+/* Responsive chart sizing */
+.chart-svg {
+    transition: height 0.3s ease;
+}
+
+/* Improved chart container spacing */
+.chart-display {
+    position: relative;
+    margin: 10px 0;
+}

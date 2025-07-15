@@ -1,0 +1,3 @@
+"""
+Day Trading Bot package.
+"""

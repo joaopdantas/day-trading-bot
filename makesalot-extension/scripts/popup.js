@@ -1,4 +1,124 @@
-document.addEventListener("DOMContentLoaded", () => {
+// Chart optimization functions - MOVED TO TOP
+function optimizeChartForTimeframe(chartData, symbol) {
+    let timeframe = '1d'; // default
+    
+    // Method 1: Try to detect from URL (works in content script)
+    try {
+        const url = window.location.href;
+        if (url.includes('range=6mo')) timeframe = '6m';
+        else if (url.includes('range=1y')) timeframe = '1y';
+        else if (url.includes('range=5d')) timeframe = '5d';
+        else if (url.includes('range=1mo')) timeframe = '1m';
+    } catch (e) {
+        // URL detection failed (in popup), use data length to guess
+    }
+    
+    // Method 2: Guess from data length (fallback for popup)
+    if (timeframe === '1d' && chartData && chartData.length) {
+        if (chartData.length > 200) timeframe = '1y';
+        else if (chartData.length > 100) timeframe = '6m';
+        else if (chartData.length > 50) timeframe = '1m';
+        else if (chartData.length > 20) timeframe = '5d';
+    }
+    
+    const chartConfig = {
+        width: 280,
+        height: getOptimalHeight(timeframe),
+        dataPoints: getOptimalDataPoints(timeframe),
+        strokeWidth: getOptimalStrokeWidth(timeframe),
+        timeframe: timeframe
+    };
+    
+    return chartConfig;
+}
+
+function getOptimalHeight(timeframe) {
+    const heights = {
+        '1d': 180,
+        '5d': 160,
+        '1m': 150,
+        '6m': 130,  // Reduced height for 6-month view
+        '1y': 120   // More compressed for 1-year view
+    };
+    return heights[timeframe] || 150;
+}
+
+function getOptimalDataPoints(timeframe) {
+    const maxPoints = {
+        '1d': 100,   // Show all detail for 1 day
+        '5d': 70,    // Good detail for 5 days
+        '1m': 50,    // Moderate detail for 1 month
+        '6m': 35,    // Compressed for 6 months
+        '1y': 25     // Most compressed for 1 year
+    };
+    return maxPoints[timeframe] || 50;
+}
+
+function getOptimalStrokeWidth(timeframe) {
+    const strokeWidths = {
+        '1d': 2,
+        '5d': 1.8,
+        '1m': 1.5,
+        '6m': 1.2,   // Thinner lines for compressed view
+        '1y': 1      // Thinnest for maximum compression
+    };
+    return strokeWidths[timeframe] || 1.5;
+}
+
+// Sample data points intelligently to reduce chart crowding
+function sampleChartData(data, maxPoints) {
+    if (!data || data.length <= maxPoints) return data;
+    
+    const step = Math.floor(data.length / maxPoints);
+    const sampledData = [];
+    
+    // Always include first and last points
+    sampledData.push(data[0]);
+    
+    // Sample intermediate points
+    for (let i = step; i < data.length - step; i += step) {
+        sampledData.push(data[i]);
+    }
+    
+    // Always include the most recent point
+    sampledData.push(data[data.length - 1]);
+    
+    return sampledData;
+}
+
+// Add grid lines for better readability on compressed charts
+function addGridLines(content, width, height, padding) {
+    // Add horizontal grid lines (3 lines)
+    for (let i = 1; i <= 3; i++) {
+        const y = padding + (i * (height - 2 * padding) / 4);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", padding);
+        line.setAttribute("y1", y);
+        line.setAttribute("x2", width - padding);
+        line.setAttribute("y2", y);
+        line.setAttribute("stroke", "rgba(255, 255, 255, 0.1)");
+        line.setAttribute("stroke-width", "0.5");
+        content.appendChild(line);
+    }
+    
+    // Add vertical grid lines (2 lines)
+    for (let i = 1; i <= 2; i++) {
+        const x = padding + (i * (width - 2 * padding) / 3);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x);
+        line.setAttribute("y1", padding);
+        line.setAttribute("x2", x);
+        line.setAttribute("y2", height - padding);
+        line.setAttribute("stroke", "rgba(255, 255, 255, 0.1)");
+        line.setAttribute("stroke-width", "0.5");
+        content.appendChild(line);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  // REMOVED: CSS injection code (using styles.css instead)
+
+  const baseURL = "http://localhost:8000";
   // Variables for card selection
   let selectedStrategy = null;
   let selectedMode = null;
@@ -228,18 +348,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const apiUsed = signalData.api_used || priceData.api_used || "auto-detected";
     document.getElementById("apiSource").textContent = `Data source: ${apiUsed} (smart fallback)`;
 
-    // Chart display logic
+    // Chart display logic - IMPROVED
     const chartData = histData.data || histData;
     if (chartData && chartData.length > 0) {
+      // 🚀 Get optimized chart configuration
+      const config = optimizeChartForTimeframe(chartData, symbol);
+      const sampledData = sampleChartData(chartData, config.dataPoints);
+      
       const svg = document.getElementById("chartSvg");
       const content = document.getElementById("chartContent");
       content.innerHTML = "";
       
-      const prices = chartData.map(d => d.close || d.Close);
+      // 🚀 Apply optimized height and add timeframe class
+      svg.setAttribute("height", config.height);
+      svg.style.height = config.height + "px";
+      svg.className = `chart-svg chart-${config.timeframe}`;
+      
+      const prices = sampledData.map(d => d.close || d.Close);
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       const w = svg.clientWidth;
-      const h = svg.clientHeight;
+      const h = config.height; // Use optimized height
       const pad = 20;
       
       const x = (i) => pad + i * (w - 2 * pad) / (prices.length - 1);
@@ -250,8 +379,14 @@ document.addEventListener("DOMContentLoaded", () => {
       el.setAttribute("d", path); 
       el.setAttribute("stroke", "#22c55e");
       el.setAttribute("fill", "none"); 
-      el.setAttribute("stroke-width", 2);
+      // 🚀 Use optimized stroke width
+      el.setAttribute("stroke-width", config.strokeWidth);
       content.appendChild(el);
+      
+      // 🚀 Add grid lines for better readability on compressed charts
+      if (config.height <= 130) { // For compressed charts (6m, 1y)
+        addGridLines(content, w, h, pad);
+      }
       
       document.getElementById("highPrice").textContent = `$${max.toFixed(2)}`;
       document.getElementById("lowPrice").textContent = `$${min.toFixed(2)}`;
