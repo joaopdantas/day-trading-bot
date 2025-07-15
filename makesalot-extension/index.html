@@ -22,25 +22,73 @@
             <input type="text" id="symbol" placeholder="Enter symbol (e.g., MSFT)" />
         </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="apiType">API Provider</label>
-                <select id="apiType">
-                    <option value="polygon">Polygon</option>
-                    <option value="alpha_vantage">Alpha Vantage</option>
-                    <option value="yahoo_finance">Yahoo Finance</option>
-                </select>
+        <!-- REMOVED API Provider selection - now automatic Polygon → Alpha Vantage fallback -->
+
+        <!-- Strategy Cards -->
+        <div class="strategy-selection">
+            <h3>Choose Your Trading Style</h3>
+            
+            <div class="strategy-card" data-strategy="conservative">
+                <div class="strategy-header">
+                    <span class="strategy-icon">📊</span>
+                    <h4>Conservative</h4>
+                    <span class="strategy-subtitle">Perfect for beginners!</span>
+                </div>
+                <div class="strategy-metrics">
+                    <div>Historical Win Rate: <strong>100%</strong></div>
+                    <div>Annual Return: <strong>7-22%</strong></div>
+                    <div>Risk Level: <strong class="risk-low">Very Low</strong></div>
+                </div>
+                <p>High win rate, steady gains, proven technical analysis</p>
+                <small>*Based on 1-year backtesting</small>
             </div>
 
-            <div class="form-group">
-                <label for="strategy">Strategy</label>
-                <select id="strategy">
-                    <option value="technical">Technical Analysis</option>
-                    <option value="ml">Machine Learning</option>
-                    <option value="buy_and_hold">Buy and Hold</option>
-                    <option value="rsi_divergence">RSI Divergence</option>
-                    <option value="hybrid">Hybrid RSI</option>
-                </select>
+            <div class="strategy-card" data-strategy="aggressive">
+                <div class="strategy-header">
+                    <span class="strategy-icon">⚡</span>
+                    <h4>Aggressive</h4>
+                    <span class="strategy-subtitle">For experienced traders!</span>
+                </div>
+                <div class="strategy-metrics">
+                    <div>Historical Win Rate: <strong>45-60%</strong></div>
+                    <div>Annual Return: <strong>Up to 39%</strong></div>
+                    <div>Risk Level: <strong class="risk-high">High</strong></div>
+                </div>
+                <p>AI-driven approach, higher returns, requires patience</p>
+                <small>*Based on ML Trading results</small>
+            </div>
+
+            <div class="strategy-card" data-strategy="balanced">
+                <div class="strategy-header">
+                    <span class="strategy-icon">⚖️</span>
+                    <h4>Balanced</h4>
+                    <span class="strategy-subtitle">Best risk-adjusted returns!</span>
+                </div>
+                <div class="strategy-metrics">
+                    <div>Historical Win Rate: <strong>60-70%</strong></div>
+                    <div>Annual Return: <strong>12-16%</strong></div>
+                    <div>Risk Level: <strong class="risk-medium">Medium</strong></div>
+                </div>
+                <p>Diversified portfolio approach, consistent performance</p>
+                <small>*Based on Split-Capital Strategy</small>
+            </div>
+        </div>
+
+        <!-- Trading Mode Selection -->
+        <div class="mode-selection" id="modeSelection" style="display: none;">
+            <h3>How would you like to trade?</h3>
+            
+            <div class="mode-card" data-mode="advisory">
+                <span class="mode-icon">👤</span>
+                <h4>Advisory Mode</h4>
+                <p>Get recommendations, you decide when to trade</p>
+            </div>
+            
+            <div class="mode-card" data-mode="automated">
+                <span class="mode-icon">🤖</span>
+                <h4>Automated Mode</h4>
+                <p>System executes trades based on signals</p>
+                <small>⚠️ Paper trading only</small>
             </div>
         </div>
 
@@ -51,7 +99,6 @@
                     <option value="1m">1 Minutes</option>
                     <option value="5m">5 Minutes</option>
                     <option value="1h">1 Hour</option>
-                    <option value="1d">1 Day</option>
                     <option value="1d">1 Day</option>
                     <option value="1wk">1 Week</option>
                     <option value="1mo">1 Month</option>
@@ -66,7 +113,7 @@
             <button class="time-btn" data-period="12m">12M</button>
         </div>
 
-        <button class="analyze-btn" id="analyzeBtn">📊 Analyze Stock</button>
+        <button class="analyze-btn" id="analyzeBtn" disabled>Select Strategy & Mode</button>
 
         <div class="loading" id="loading" style="display: none;">
             <div class="spinner"></div>
@@ -88,6 +135,11 @@
                     <div id="priceDate" style="font-size: 10px; opacity: 0.8;">Current Price</div>
                 </div>
                 <div class="price-change" id="priceChange">+0.00%</div>
+            </div>
+
+            <!-- Add API source indicator -->
+            <div class="api-source" id="apiSource" style="font-size: 10px; opacity: 0.7; text-align: center; margin-bottom: 15px;">
+                Data source: Auto-detected
             </div>
 
             <div class="chart-container">

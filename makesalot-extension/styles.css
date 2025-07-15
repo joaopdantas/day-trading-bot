@@ -70,6 +70,176 @@ body {
     color: white;
 }
 
+/* Strategy Cards */
+.strategy-selection {
+    margin-bottom: 20px;
+}
+
+.strategy-selection h3 {
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.strategy-card {
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.strategy-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.strategy-card.selected {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.strategy-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.strategy-icon { 
+    font-size: 24px; 
+}
+
+.strategy-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.strategy-subtitle {
+    color: #4CAF50;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.strategy-metrics {
+    font-size: 11px;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.strategy-metrics div {
+    margin-bottom: 2px;
+}
+
+.strategy-card p {
+    font-size: 12px;
+    margin-bottom: 5px;
+    opacity: 0.9;
+}
+
+.strategy-card small {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.risk-low { 
+    color: #4CAF50; 
+}
+
+.risk-medium { 
+    color: #FF9800; 
+}
+
+.risk-high { 
+    color: #f44336; 
+}
+
+/* Mode Cards */
+.mode-selection {
+    margin-bottom: 20px;
+}
+
+.mode-selection h3 {
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.mode-card {
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.mode-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.mode-card.selected {
+    border-color: #2196F3;
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.mode-icon { 
+    font-size: 20px; 
+    display: block; 
+    margin-bottom: 5px; 
+}
+
+.mode-card h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+.mode-card p {
+    margin: 0 0 5px 0;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.mode-card small {
+    font-size: 10px;
+    color: #FF9800;
+    font-weight: 600;
+}
+
+/* Time Buttons */
+.time-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.time-btn {
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.time-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.time-btn.active {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: #4CAF50;
+}
+
 .analyze-btn {
     width: 100%;
     padding: 12px;
@@ -84,7 +254,7 @@ body {
     transition: all 0.3s;
 }
 
-.analyze-btn:hover {
+.analyze-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
 }
@@ -92,118 +262,109 @@ body {
 .analyze-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.api-status {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 12px;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .loading {
     display: none;
     text-align: center;
     margin-bottom: 15px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .spinner {
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid white;
+    border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-right: 10px;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
+}
+
+.error {
+    color: #f44336;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 13px;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(244, 67, 54, 0.1);
 }
 
 .results {
-    display: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
 }
 
 .recommendation {
     text-align: center;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
     margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .recommendation-text {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: bold;
     margin-bottom: 5px;
 }
 
-.recommendation.buy .recommendation-text {
-    color: #22c55e;
-}
-
-.recommendation.sell .recommendation-text {
-    color: #ef4444;
-}
-
-.recommendation.hold .recommendation-text {
-    color: #f59e0b;
-}
-
 .confidence {
-    font-size: 12px;
+    font-size: 14px;
     opacity: 0.8;
+    margin-bottom: 5px;
 }
 
 .analysis-summary {
-    font-size: 11px;
-    margin-top: 8px;
-    opacity: 0.9;
-    background: rgba(0,0,0,0.2);
-    padding: 8px;
-    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0.7;
 }
 
 .price-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
     margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .current-price {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
 }
 
 .price-change {
-    font-size: 12px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    font-size: 14px;
     font-weight: 600;
 }
 
-.price-change.positive {
-    background: rgba(34, 197, 94, 0.3);
-    color: #22c55e;
-}
-
-.price-change.negative {
-    background: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
-}
-
 .chart-container {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px;
 }
 
 .chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+    text-align: center;
+    margin-bottom: 10px;
 }
 
 .chart-title {
@@ -211,206 +372,36 @@ body {
     font-weight: 600;
 }
 
-.time-buttons {
-    display: flex;
-    gap: 5px;
-}
-
-.time-btn {
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.3s;
-    margin-bottom: 16px;
-}
-
-.time-btn.active {
-    background: rgba(255, 255, 255, 0.3);
-    font-weight: 600;
-}
-
-.time-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
 .chart-display {
-    height: 120px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 15px;
-    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 10px;
+    text-align: center;
 }
 
 .chart-svg {
-    width: 100%;
-    height: 100%;
-}
-
-.chart-line {
-    fill: none;
-    stroke-width: 2;
-}
-
-.chart-area {
-    opacity: 0.3;
-}
-
-.chart-grid line {
-    stroke: rgba(255,255,255,0.1);
-    stroke-width: 1;
-}
-
-.chart-tooltip {
-    position: absolute;
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 6px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 100;
-    display: none;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-.chart-point {
-    fill: white;
-    stroke: none;
-    r: 3;
-    opacity: 0;
-    transition: opacity 0.3s;
-    cursor: pointer;
-}
-
-.chart-point:hover {
-    opacity: 1;
-    r: 4;
 }
 
 .chart-info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
-    text-align: center;
 }
 
 .chart-stat {
+    text-align: center;
+    padding: 8px;
     background: rgba(255, 255, 255, 0.05);
-    padding: 10px;
     border-radius: 6px;
 }
 
 .chart-stat-label {
     font-size: 10px;
-    opacity: 0.8;
-    margin-bottom: 4px;
+    opacity: 0.7;
+    margin-bottom: 2px;
 }
 
 .chart-stat-value {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-}
-
-.indicators {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-}
-
-.indicator {
-    text-align: center;
-    padding: 10px 6px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-}
-
-.indicator-name {
-    font-size: 10px;
-    opacity: 0.8;
-    margin-bottom: 4px;
-}
-
-.indicator-value {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 3px;
-}
-
-.indicator-signal {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: 600;
-}
-
-.signal-buy {
-    background: rgba(34, 197, 94, 0.3);
-    color: #22c55e;
-}
-
-.signal-sell {
-    background: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
-}
-
-.signal-hold {
-    background: rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
-}
-
-.error {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 15px;
-    display: none;
-}
-
-.api-status {
-    font-size: 10px;
-    text-align: center;
-    margin-bottom: 10px;
-    padding: 4px;
-    border-radius: 4px;
-}
-
-.api-status.connected {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-}
-
-.api-status.disconnected {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-}
-
-.chart-legend {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    font-size: 10px;
-    margin-top: 8px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.legend-color {
-    width: 12px;
-    height: 2px;
-    border-radius: 1px;
 }
