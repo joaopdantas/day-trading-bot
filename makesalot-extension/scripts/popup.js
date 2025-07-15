@@ -116,13 +116,13 @@ function addGridLines(content, width, height, padding) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-  // REMOVED: CSS injection code (using styles.css instead)
-
   const baseURL = "http://localhost:8000";
+  
   // Variables for card selection
   let selectedStrategy = null;
   let selectedMode = null;
   let selectedMonths = 3;
+  let selectedInterval = "1w"; // Default to weekly for 3M period
 
   // Check API connection on load
   checkAPIConnection();
@@ -138,7 +138,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // API Connection Check with smart fallback info
   async function checkAPIConnection() {
     const statusElement = document.getElementById("apiStatus");
-    const baseURL = "http://localhost:8000";  // Local testing
     
     statusElement.textContent = "🔄 Checking API connection (Polygon → Alpha Vantage fallback)...";
     statusElement.style.background = "rgba(255, 193, 7, 0.2)";
@@ -186,14 +185,21 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Time button logic
+  // 🚀 UPDATED: Time button logic with automatic interval setting
   document.querySelectorAll(".time-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".time-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      
+      // Set both months and interval based on button data
       selectedMonths = parseInt(btn.dataset.period.replace("m", ""));
+      selectedInterval = btn.dataset.interval;
+      
+      console.log(`Selected: ${selectedMonths} months with ${selectedInterval} intervals`);
     });
   });
+  
+  // Set default selection (3M with weekly intervals)
   document.querySelector(".time-btn[data-period='3m']").click();
 
   // Strategy card selection
@@ -236,20 +242,19 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Analyze button click - SIMPLIFIED (no API selection needed)
+  // 🚀 UPDATED: Analyze button click - Uses automatic interval setting
   const analyzeBtn = document.getElementById("analyzeBtn");
   analyzeBtn.addEventListener("click", async () => {
     const symbol = document.getElementById("symbol").value.toUpperCase();
     const strategy = selectedStrategy;
-    const interval = document.getElementById("interval").value;
+    const interval = selectedInterval; // 🚀 Now uses automatically set interval
     const endDate = new Date();
     const startDate = new Date(new Date().setMonth(endDate.getMonth() - selectedMonths));
     const formatDate = (d) => d.toISOString().split("T")[0];
-    const baseURL = "http://localhost:8000";  // Local testing
 
     // Show confirmation for automated mode
     if (selectedMode === "automated") {
-      const confirmed = confirm(`Execute paper trade for ${symbol}?\nThis will use the ${strategy} strategy.\n\nThis is paper trading - no real money involved.`);
+      const confirmed = confirm(`Execute paper trade for ${symbol}?\nThis will use the ${strategy} strategy with ${interval} intervals over ${selectedMonths} months.\n\nThis is paper trading - no real money involved.`);
       if (!confirmed) return;
     }
 
@@ -257,6 +262,8 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("loading").style.display = "flex";
     document.getElementById("results").style.display = "none";
     document.getElementById("error").textContent = "";
+
+    console.log(`Making API request with: symbol=${symbol}, interval=${interval}, months=${selectedMonths}`);
 
     try {
       // Fetch with timeout helper
@@ -277,7 +284,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       };
 
-      // Make API calls (no api parameter needed - automatic fallback)
+      // Make API calls with automatic interval (no manual selection needed)
       const [priceRes, histRes, signalRes] = await Promise.all([
         fetchWithTimeout(`${baseURL}/price/latest?symbol=${symbol}`),
         fetchWithTimeout(`${baseURL}/price/historical?symbol=${symbol}&interval=${interval}&start_date=${formatDate(startDate)}&end_date=${formatDate(endDate)}`),
@@ -333,11 +340,18 @@ document.addEventListener("DOMContentLoaded", function() {
       'balanced': 'Balanced (Split-Capital)'
     };
 
+    // 🚀 IMPROVED: Show interval info in analysis summary
+    const intervalLabels = {
+      '1d': 'daily',
+      '1w': 'weekly', 
+      '1M': 'monthly'
+    };
+
     // Update result display
     document.getElementById("recommendationText").textContent = signalData.signal || signalData.action || "HOLD";
     document.getElementById("confidenceText").textContent = `Confidence: ${Math.round((signalData.confidence || 0.5) * 100)}%`;
     document.getElementById("analysisSummary").textContent = 
-      `${modeText} using ${strategyNames[strategy] || strategy} strategy`;
+      `${modeText} using ${strategyNames[strategy] || strategy} strategy (${intervalLabels[selectedInterval] || selectedInterval} data, ${selectedMonths}M period)`;
     
     // Handle price data (could be from either API response format)
     const price = priceData.price || priceData.data?.[0]?.close || 0;
